@@ -1,14 +1,11 @@
-pub fn add(left: usize, right: usize) -> usize {
-    left + right
+#[derive(PartialEq, Eq)]
+pub enum DataType {
+    Scalar,
+    Vec2,
 }
 
-#[cfg(test)]
-mod tests {
-    use super::*;
-
-    #[test]
-    fn it_works() {
-        let result = add(2, 2);
-        assert_eq!(result, 4);
-    }
+#[derive(Copy, Clone, Debug)]
+pub enum Value {
+    Vec2 { value: [f32; 2] },
+    Scalar { value: f32 },
 }

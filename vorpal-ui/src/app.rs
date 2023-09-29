@@ -2,6 +2,7 @@ use std::{borrow::Cow, collections::HashMap};
 
 use eframe::egui::{self, DragValue, TextStyle};
 use egui_node_graph::*;
+use vorpal_core::*;
 
 // ========= First, define your user data types =============
 
@@ -13,51 +14,22 @@ pub struct MyNodeData {
     template: MyNodeTemplate,
 }
 
-/// `DataType`s are what defines the possible range of connections when
-/// attaching two ports together. The graph UI will make sure to not allow
-/// attaching incompatible datatypes.
-#[derive(PartialEq, Eq)]
-#[cfg_attr(feature = "persistence", derive(serde::Serialize, serde::Deserialize))]
-pub enum MyDataType {
-    Scalar,
-    Vec2,
-}
-
-/// In the graph, input parameters can optionally have a constant value. This
-/// value can be directly edited in a widget inside the node itself.
-///
-/// There will usually be a correspondence between DataTypes and ValueTypes. But
-/// this library makes no attempt to check this consistency. For instance, it is
-/// up to the user code in this example to make sure no parameter is created
-/// with a DataType of Scalar and a ValueType of Vec2.
 #[derive(Copy, Clone, Debug)]
-#[cfg_attr(feature = "persistence", derive(serde::Serialize, serde::Deserialize))]
-pub enum MyValueType {
-    Vec2 { value: egui::Vec2 },
-    Scalar { value: f32 },
-}
+pub struct NodeGuiValue(pub Value);
 
-impl Default for MyValueType {
-    fn default() -> Self {
-        // NOTE: This is just a dummy `Default` implementation. The library
-        // requires it to circumvent some internal borrow checker issues.
-        Self::Scalar { value: 0.0 }
-    }
-}
-
-impl MyValueType {
+impl NodeGuiValue {
     /// Tries to downcast this value type to a vector
-    pub fn try_to_vec2(self) -> anyhow::Result<egui::Vec2> {
-        if let MyValueType::Vec2 { value } = self {
-            Ok(value)
+    fn try_to_vec2(self) -> anyhow::Result<egui::Vec2> {
+        if let Self(Value::Vec2 { value }) = self {
+            Ok(value.into())
         } else {
             anyhow::bail!("Invalid cast from {:?} to vec2", self)
         }
     }
 
     /// Tries to downcast this value type to a scalar
-    pub fn try_to_scalar(self) -> anyhow::Result<f32> {
-        if let MyValueType::Scalar { value } = self {
+    fn try_to_scalar(self) -> anyhow::Result<f32> {
+        if let Self(Value::Scalar { value }) = self {
             Ok(value)
         } else {
             anyhow::bail!("Invalid cast from {:?} to scalar", self)
@@ -102,18 +74,18 @@ pub struct MyGraphState {
 // =========== Then, you need to implement some traits ============
 
 // A trait for the data types, to tell the library how to display them
-impl DataTypeTrait<MyGraphState> for MyDataType {
+impl DataTypeTrait<MyGraphState> for DataType {
     fn data_type_color(&self, _user_state: &mut MyGraphState) -> egui::Color32 {
         match self {
-            MyDataType::Scalar => egui::Color32::from_rgb(38, 109, 211),
-            MyDataType::Vec2 => egui::Color32::from_rgb(238, 207, 109),
+            DataType::Scalar => egui::Color32::from_rgb(38, 109, 211),
+            DataType::Vec2 => egui::Color32::from_rgb(238, 207, 109),
         }
     }
 
     fn name(&self) -> Cow<'_, str> {
         match self {
-            MyDataType::Scalar => Cow::Borrowed("scalar"),
-            MyDataType::Vec2 => Cow::Borrowed("2d vector"),
+            DataType::Scalar => Cow::Borrowed("scalar"),
+            DataType::Vec2 => Cow::Borrowed("2d vector"),
         }
     }
 }
@@ -122,8 +94,8 @@ impl DataTypeTrait<MyGraphState> for MyDataType {
 // from the templates in the node finder
 impl NodeTemplateTrait for MyNodeTemplate {
     type NodeData = MyNodeData;
-    type DataType = MyDataType;
-    type ValueType = MyValueType;
+    type DataType = DataType;
+    type ValueType = NodeGuiValue;
     type UserState = MyGraphState;
     type CategoryType = &'static str;
 
@@ -177,8 +149,8 @@ impl NodeTemplateTrait for MyNodeTemplate {
             graph.add_input_param(
                 node_id,
                 name.to_string(),
-                MyDataType::Scalar,
-                MyValueType::Scalar { value: 0.0 },
+                DataType::Scalar,
+                NodeGuiValue(Value::Scalar { value: 0.0 }),
                 InputParamKind::ConnectionOrConstant,
                 true,
             );
@@ -187,20 +159,20 @@ impl NodeTemplateTrait for MyNodeTemplate {
             graph.add_input_param(
                 node_id,
                 name.to_string(),
-                MyDataType::Vec2,
-                MyValueType::Vec2 {
-                    value: egui::vec2(0.0, 0.0),
-                },
+                DataType::Vec2,
+                NodeGuiValue(Value::Vec2 {
+                    value: [0.0, 0.0],
+                }),
                 InputParamKind::ConnectionOrConstant,
                 true,
             );
         };
 
         let output_scalar = |graph: &mut MyGraph, name: &str| {
-            graph.add_output_param(node_id, name.to_string(), MyDataType::Scalar);
+            graph.add_output_param(node_id, name.to_string(), DataType::Scalar);
         };
         let output_vector = |graph: &mut MyGraph, name: &str| {
-            graph.add_output_param(node_id, name.to_string(), MyDataType::Vec2);
+            graph.add_output_param(node_id, name.to_string(), DataType::Vec2);
         };
 
         match self {
@@ -213,9 +185,9 @@ impl NodeTemplateTrait for MyNodeTemplate {
                     // retrieve the value. Parameter names should be unique.
                     "A".into(),
                     // The data type for this input. In this case, a scalar
-                    MyDataType::Scalar,
+                    DataType::Scalar,
                     // The value type for this input. We store zero as default
-                    MyValueType::Scalar { value: 0.0 },
+                    NodeGuiValue(Value::Scalar { value: 0.0 }),
                     // The input parameter kind. This allows defining whether a
                     // parameter accepts input connections and/or an inline
                     // widget to set its value.
@@ -278,7 +250,7 @@ impl NodeTemplateIter for AllMyNodeTemplates {
     }
 }
 
-impl WidgetValueTrait for MyValueType {
+impl WidgetValueTrait for NodeGuiValue {
     type Response = MyResponse;
     type UserState = MyGraphState;
     type NodeData = MyNodeData;
@@ -293,16 +265,16 @@ impl WidgetValueTrait for MyValueType {
         // This trait is used to tell the library which UI to display for the
         // inline parameter widgets.
         match self {
-            MyValueType::Vec2 { value } => {
+            Self(Value::Vec2 { value }) => {
                 ui.label(param_name);
                 ui.horizontal(|ui| {
                     ui.label("x");
-                    ui.add(DragValue::new(&mut value.x));
+                    ui.add(DragValue::new(&mut value[0]));
                     ui.label("y");
-                    ui.add(DragValue::new(&mut value.y));
+                    ui.add(DragValue::new(&mut value[1]));
                 });
             }
-            MyValueType::Scalar { value } => {
+            Self(Value::Scalar { value }) => {
                 ui.horizontal(|ui| {
                     ui.label(param_name);
                     ui.add(DragValue::new(value));
@@ -318,8 +290,8 @@ impl UserResponseTrait for MyResponse {}
 impl NodeDataTrait for MyNodeData {
     type Response = MyResponse;
     type UserState = MyGraphState;
-    type DataType = MyDataType;
-    type ValueType = MyValueType;
+    type DataType = DataType;
+    type ValueType = NodeGuiValue;
 
     // This method will be called when drawing each node. This allows adding
     // extra ui elements inside the nodes. In this case, we create an "active"
@@ -330,7 +302,7 @@ impl NodeDataTrait for MyNodeData {
         &self,
         ui: &mut egui::Ui,
         node_id: NodeId,
-        _graph: &Graph<MyNodeData, MyDataType, MyValueType>,
+        _graph: &Graph<MyNodeData, DataType, NodeGuiValue>,
         user_state: &mut Self::UserState,
     ) -> Vec<NodeResponse<MyResponse, MyNodeData>>
     where
@@ -368,9 +340,9 @@ impl NodeDataTrait for MyNodeData {
     }
 }
 
-type MyGraph = Graph<MyNodeData, MyDataType, MyValueType>;
+type MyGraph = Graph<MyNodeData, DataType, NodeGuiValue>;
 type MyEditorState =
-    GraphEditorState<MyNodeData, MyDataType, MyValueType, MyNodeTemplate, MyGraphState>;
+    GraphEditorState<MyNodeData, DataType, NodeGuiValue, MyNodeTemplate, MyGraphState>;
 
 #[derive(Default)]
 pub struct NodeGraphExample {
@@ -457,14 +429,14 @@ impl eframe::App for NodeGraphExample {
     }
 }
 
-type OutputsCache = HashMap<OutputId, MyValueType>;
+type OutputsCache = HashMap<OutputId, NodeGuiValue>;
 
 /// Recursively evaluates all dependencies of this node, then evaluates the node itself.
 pub fn evaluate_node(
     graph: &MyGraph,
     node_id: NodeId,
     outputs_cache: &mut OutputsCache,
-) -> anyhow::Result<MyValueType> {
+) -> anyhow::Result<NodeGuiValue> {
     // To solve a similar problem as creating node types above, we define an
     // Evaluator as a convenience. It may be overkill for this small example,
     // but something like this makes the code much more readable when the
@@ -483,7 +455,7 @@ pub fn evaluate_node(
                 node_id,
             }
         }
-        fn evaluate_input(&mut self, name: &str) -> anyhow::Result<MyValueType> {
+        fn evaluate_input(&mut self, name: &str) -> anyhow::Result<NodeGuiValue> {
             // Calling `evaluate_input` recursively evaluates other nodes in the
             // graph until the input value for a paramater has been computed.
             evaluate_input(self.graph, self.node_id, name, self.outputs_cache)
@@ -491,8 +463,8 @@ pub fn evaluate_node(
         fn populate_output(
             &mut self,
             name: &str,
-            value: MyValueType,
-        ) -> anyhow::Result<MyValueType> {
+            value: NodeGuiValue,
+        ) -> anyhow::Result<NodeGuiValue> {
             // After computing an output, we don't just return it, but we also
             // populate the outputs cache with it. This ensures the evaluation
             // only ever computes an output once.
@@ -514,11 +486,11 @@ pub fn evaluate_node(
         fn input_scalar(&mut self, name: &str) -> anyhow::Result<f32> {
             self.evaluate_input(name)?.try_to_scalar()
         }
-        fn output_vector(&mut self, name: &str, value: egui::Vec2) -> anyhow::Result<MyValueType> {
-            self.populate_output(name, MyValueType::Vec2 { value })
+        fn output_vector(&mut self, name: &str, value: egui::Vec2) -> anyhow::Result<NodeGuiValue> {
+            self.populate_output(name, NodeGuiValue(Value::Vec2 { value: value.into() }))
         }
-        fn output_scalar(&mut self, name: &str, value: f32) -> anyhow::Result<MyValueType> {
-            self.populate_output(name, MyValueType::Scalar { value })
+        fn output_scalar(&mut self, name: &str, value: f32) -> anyhow::Result<NodeGuiValue> {
+            self.populate_output(name, NodeGuiValue(Value::Scalar { value }))
         }
     }
 
@@ -567,8 +539,8 @@ fn populate_output(
     outputs_cache: &mut OutputsCache,
     node_id: NodeId,
     param_name: &str,
-    value: MyValueType,
-) -> anyhow::Result<MyValueType> {
+    value: NodeGuiValue,
+) -> anyhow::Result<NodeGuiValue> {
     let output_id = graph[node_id].get_output(param_name)?;
     outputs_cache.insert(output_id, value);
     Ok(value)
@@ -580,7 +552,7 @@ fn evaluate_input(
     node_id: NodeId,
     param_name: &str,
     outputs_cache: &mut OutputsCache,
-) -> anyhow::Result<MyValueType> {
+) -> anyhow::Result<NodeGuiValue> {
     let input_id = graph[node_id].get_input(param_name)?;
 
     // The output of another node is connected.
@@ -605,5 +577,13 @@ fn evaluate_input(
     // No existing connection, take the inline value instead.
     else {
         Ok(graph[input_id].value)
+    }
+}
+
+impl Default for NodeGuiValue {
+    fn default() -> Self {
+        // NOTE: This is just a dummy `Default` implementation. The nodge graph library
+        // requires it to circumvent some internal borrow checker issues.
+        Self(Value::Scalar { value: 0.0 })
     }
 }

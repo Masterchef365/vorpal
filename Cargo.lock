@@ -2341,6 +2341,7 @@ dependencies = [
  "eframe",
  "egui_node_graph",
  "serde",
+ "vorpal-core",
 ]
 
 [[package]]
