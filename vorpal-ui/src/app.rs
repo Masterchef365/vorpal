@@ -1,4 +1,4 @@
-use std::{borrow::Cow, collections::HashMap};
+use std::{borrow::Cow, collections::HashMap, rc::Rc};
 
 use eframe::egui::{self, DragValue, TextStyle};
 use egui_node_graph::*;
@@ -411,7 +411,7 @@ impl eframe::App for NodeGraphExample {
 
         if let Some(node) = self.user_state.active_node {
             if self.state.graph.nodes.contains_key(node) {
-                let text = match evaluate_node(&self.state.graph, node, &mut HashMap::new()) {
+                let text = match evaluate_node(&self.state.graph, node) {
                     Ok(value) => format!("The result is: {:?}", value),
                     Err(err) => format!("Execution error: {}", err),
                 };
@@ -429,154 +429,96 @@ impl eframe::App for NodeGraphExample {
     }
 }
 
-type OutputsCache = HashMap<OutputId, NodeGuiValue>;
+type OutputsCache = HashMap<OutputId, Rc<vorpal_core::Node>>;
 
 /// Recursively evaluates all dependencies of this node, then evaluates the node itself.
 pub fn evaluate_node(
     graph: &MyGraph,
     node_id: NodeId,
-    outputs_cache: &mut OutputsCache,
 ) -> anyhow::Result<NodeGuiValue> {
-    // To solve a similar problem as creating node types above, we define an
-    // Evaluator as a convenience. It may be overkill for this small example,
-    // but something like this makes the code much more readable when the
-    // number of nodes starts growing.
+    Ok(NodeGuiValue(vorpal_core::evaluate_node(&*extract_node(graph, node_id)?)?))
+}
 
-    struct Evaluator<'a> {
-        graph: &'a MyGraph,
-        outputs_cache: &'a mut OutputsCache,
-        node_id: NodeId,
-    }
-    impl<'a> Evaluator<'a> {
-        fn new(graph: &'a MyGraph, outputs_cache: &'a mut OutputsCache, node_id: NodeId) -> Self {
-            Self {
-                graph,
-                outputs_cache,
-                node_id,
-            }
-        }
-        fn evaluate_input(&mut self, name: &str) -> anyhow::Result<NodeGuiValue> {
-            // Calling `evaluate_input` recursively evaluates other nodes in the
-            // graph until the input value for a paramater has been computed.
-            evaluate_input(self.graph, self.node_id, name, self.outputs_cache)
-        }
-        fn populate_output(
-            &mut self,
-            name: &str,
-            value: NodeGuiValue,
-        ) -> anyhow::Result<NodeGuiValue> {
-            // After computing an output, we don't just return it, but we also
-            // populate the outputs cache with it. This ensures the evaluation
-            // only ever computes an output once.
-            //
-            // The return value of the function is the "final" output of the
-            // node, the thing we want to get from the evaluation. The example
-            // would be slightly more contrived when we had multiple output
-            // values, as we would need to choose which of the outputs is the
-            // one we want to return. Other outputs could be used as
-            // intermediate values.
-            //
-            // Note that this is just one possible semantic interpretation of
-            // the graphs, you can come up with your own evaluation semantics!
-            populate_output(self.graph, self.outputs_cache, self.node_id, name, value)
-        }
-        fn input_vector(&mut self, name: &str) -> anyhow::Result<egui::Vec2> {
-            self.evaluate_input(name)?.try_to_vec2()
-        }
-        fn input_scalar(&mut self, name: &str) -> anyhow::Result<f32> {
-            self.evaluate_input(name)?.try_to_scalar()
-        }
-        fn output_vector(&mut self, name: &str, value: egui::Vec2) -> anyhow::Result<NodeGuiValue> {
-            self.populate_output(name, NodeGuiValue(Value::Vec2(value.into())))
-        }
-        fn output_scalar(&mut self, name: &str, value: f32) -> anyhow::Result<NodeGuiValue> {
-            self.populate_output(name, NodeGuiValue(Value::Scalar(value)))
-        }
-    }
+pub fn extract_node(
+    graph: &MyGraph,
+    node_id: NodeId,
+) -> anyhow::Result<Rc<vorpal_core::Node>> {
+    extract_node_recursive(graph, node_id, &mut OutputsCache::new())
+}
 
+// Returns the ID of the vorpal_core::Node corresponding to given parameter of the node "node_id"
+pub fn extract_node_recursive(
+    graph: &MyGraph,
+    node_id: NodeId,
+    cache: &mut OutputsCache,
+) -> anyhow::Result<Rc<vorpal_core::Node>> {
     let node = &graph[node_id];
-    let mut evaluator = Evaluator::new(graph, outputs_cache, node_id);
-    match node.user_data.template {
+
+    let output_id = node.get_output("out")?;
+
+    if let Some(cached) = cache.get(&output_id) {
+        return Ok(cached.clone());
+    }
+
+    Ok(match node.user_data.template {
         MyNodeTemplate::AddScalar => {
-            let a = evaluator.input_scalar("A")?;
-            let b = evaluator.input_scalar("B")?;
-            evaluator.output_scalar("out", a + b)
+            Rc::new(vorpal_core::Node::AddScalar(
+                get_input_node(graph, node_id, "A", cache)?,
+                get_input_node(graph, node_id, "B", cache)?
+            ))
         }
         MyNodeTemplate::SubtractScalar => {
-            let a = evaluator.input_scalar("A")?;
-            let b = evaluator.input_scalar("B")?;
-            evaluator.output_scalar("out", a - b)
+            Rc::new(vorpal_core::Node::SubtractScalar(
+                get_input_node(graph, node_id, "A", cache)?,
+                get_input_node(graph, node_id, "B", cache)?
+            ))
         }
         MyNodeTemplate::VectorTimesScalar => {
-            let scalar = evaluator.input_scalar("scalar")?;
-            let vector = evaluator.input_vector("vector")?;
-            evaluator.output_vector("out", vector * scalar)
+            Rc::new(vorpal_core::Node::Vec2TimesScalar(
+                get_input_node(graph, node_id, "scalar", cache)?,
+                get_input_node(graph, node_id, "vector", cache)?
+            ))
         }
         MyNodeTemplate::AddVector => {
-            let v1 = evaluator.input_vector("v1")?;
-            let v2 = evaluator.input_vector("v2")?;
-            evaluator.output_vector("out", v1 + v2)
+            Rc::new(vorpal_core::Node::AddVec2(
+                get_input_node(graph, node_id, "v1", cache)?,
+                get_input_node(graph, node_id, "v2", cache)?
+            ))
         }
         MyNodeTemplate::SubtractVector => {
-            let v1 = evaluator.input_vector("v1")?;
-            let v2 = evaluator.input_vector("v2")?;
-            evaluator.output_vector("out", v1 - v2)
+            Rc::new(vorpal_core::Node::SubtractVec2(
+                get_input_node(graph, node_id, "v1", cache)?,
+                get_input_node(graph, node_id, "v2", cache)?
+            ))
         }
         MyNodeTemplate::MakeVector => {
-            let x = evaluator.input_scalar("x")?;
-            let y = evaluator.input_scalar("y")?;
-            evaluator.output_vector("out", egui::vec2(x, y))
+            Rc::new(vorpal_core::Node::MakeVec2(
+                get_input_node(graph, node_id, "x", cache)?,
+                get_input_node(graph, node_id, "y", cache)?
+            ))
         }
         MyNodeTemplate::MakeScalar => {
-            let value = evaluator.input_scalar("value")?;
-            evaluator.output_scalar("out", value)
+            get_input_node(graph, node_id, "value", cache)?
         }
-    }
+    })
 }
 
-fn populate_output(
-    graph: &MyGraph,
-    outputs_cache: &mut OutputsCache,
-    node_id: NodeId,
-    param_name: &str,
-    value: NodeGuiValue,
-) -> anyhow::Result<NodeGuiValue> {
-    let output_id = graph[node_id].get_output(param_name)?;
-    outputs_cache.insert(output_id, value);
-    Ok(value)
-}
-
-// Evaluates the input value of
-fn evaluate_input(
+fn get_input_node(
     graph: &MyGraph,
     node_id: NodeId,
     param_name: &str,
-    outputs_cache: &mut OutputsCache,
-) -> anyhow::Result<NodeGuiValue> {
+    cache: &mut OutputsCache,
+) -> anyhow::Result<Rc<vorpal_core::Node>> {
     let input_id = graph[node_id].get_input(param_name)?;
 
     // The output of another node is connected.
     if let Some(other_output_id) = graph.connection(input_id) {
-        // The value was already computed due to the evaluation of some other
-        // node. We simply return value from the cache.
-        if let Some(other_value) = outputs_cache.get(&other_output_id) {
-            Ok(*other_value)
-        }
-        // This is the first time encountering this node, so we need to
-        // recursively evaluate it.
-        else {
-            // Calling this will populate the cache
-            evaluate_node(graph, graph[other_output_id].node, outputs_cache)?;
-
-            // Now that we know the value is cached, return it
-            Ok(*outputs_cache
-                .get(&other_output_id)
-                .expect("Cache should be populated"))
-        }
+        extract_node_recursive(graph, graph[other_output_id].node, cache)
     }
     // No existing connection, take the inline value instead.
     else {
-        Ok(graph[input_id].value)
+        let NodeGuiValue(value) = graph[input_id].value;
+        Ok(Rc::new(vorpal_core::Node::Constant(value)))
     }
 }
 

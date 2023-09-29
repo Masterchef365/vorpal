@@ -17,10 +17,10 @@ pub enum Value {
 
 #[derive(Clone)]
 pub enum Node {
-    ConstantScalar(Scalar),
+    Constant(Value),
+    MakeVec2(Rc<Node>, Rc<Node>),
     AddScalar(Rc<Node>, Rc<Node>),
     SubtractScalar(Rc<Node>, Rc<Node>),
-    ConstantVec2(Vec2),
     AddVec2(Rc<Node>, Rc<Node>),
     SubtractVec2(Rc<Node>, Rc<Node>),
     Vec2TimesScalar(Rc<Node>, Rc<Node>),
@@ -28,14 +28,13 @@ pub enum Node {
 
 pub fn evaluate_node(node: &Node) -> Result<Value, EvalError> {
     match node {
-        Node::ConstantScalar(scalar) => Ok(Value::Scalar(*scalar)),
+        Node::Constant(value) => Ok(*value),
         Node::AddScalar(a, b) => Ok(Value::Scalar(
             evaluate_node(a)?.try_to_scalar()? + evaluate_node(b)?.try_to_scalar()?,
         )),
         Node::SubtractScalar(a, b) => Ok(Value::Scalar(
             evaluate_node(a)?.try_to_scalar()? - evaluate_node(b)?.try_to_scalar()?,
         )),
-        Node::ConstantVec2(scalar) => Ok(Value::Vec2(*scalar)),
         Node::AddVec2(a, b) => {
             let mut a = evaluate_node(a)?.try_to_vec2()?;
             let b = evaluate_node(b)?.try_to_vec2()?;
@@ -52,6 +51,10 @@ pub fn evaluate_node(node: &Node) -> Result<Value, EvalError> {
             let b = evaluate_node(&b)?.try_to_scalar()?;
             Ok(Value::Vec2(evaluate_node(a)?.try_to_vec2()?.map(|x| x * b)))
         }
+        Node::MakeVec2(a, b) => Ok(Value::Vec2([
+            evaluate_node(a)?.try_to_scalar()?,
+            evaluate_node(b)?.try_to_scalar()?,
+        ])),
     }
 }
 
@@ -84,39 +87,48 @@ mod tests {
 
     #[test]
     fn eval_basic() {
-
         assert_eq!(
             evaluate_node(&Node::AddScalar(
-                Rc::new(Node::ConstantScalar(2.0)),
-                Rc::new(Node::ConstantScalar(2.0))
-            )).unwrap(),
+                Rc::new(Node::Constant(Value::Scalar(2.0))),
+                Rc::new(Node::Constant(Value::Scalar(2.0)))
+            ))
+            .unwrap(),
             Value::Scalar(4.0)
         );
         assert_eq!(
             evaluate_node(&Node::AddVec2(
-                Rc::new(Node::ConstantVec2([2.0, -5.])),
-                Rc::new(Node::ConstantVec2([2.0, 5.]))
-            )).unwrap(),
+                Rc::new(Node::Constant(Value::Vec2([2.0, -5.]))),
+                Rc::new(Node::Constant(Value::Vec2([2.0, 5.])))
+            ))
+            .unwrap(),
             Value::Vec2([4.0, 0.0])
         );
 
         assert_eq!(
             evaluate_node(&Node::SubtractScalar(
-                Rc::new(Node::ConstantScalar(2.0)),
-                Rc::new(Node::ConstantScalar(2.0))
-            )).unwrap(),
+                Rc::new(Node::Constant(Value::Scalar(2.0))),
+                Rc::new(Node::Constant(Value::Scalar(2.0)))
+            ))
+            .unwrap(),
             Value::Scalar(0.0)
         );
         assert_eq!(
             evaluate_node(&Node::SubtractVec2(
-                Rc::new(Node::ConstantVec2([2.0, -5.])),
-                Rc::new(Node::ConstantVec2([2.0, 5.]))
-            )).unwrap(),
+                Rc::new(Node::Constant(Value::Vec2([2.0, -5.]))),
+                Rc::new(Node::Constant(Value::Vec2([2.0, 5.])))
+            ))
+            .unwrap(),
             Value::Vec2([0.0, -10.0])
         );
+    }
+}
 
+impl std::error::Error for EvalError {}
 
-
-
+impl std::fmt::Display for EvalError {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            EvalError::TypeMismatch => write!(f, "Type mismatch"),
+        }
     }
 }
