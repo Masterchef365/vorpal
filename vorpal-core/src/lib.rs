@@ -47,9 +47,9 @@ pub fn evaluate_node(node: &Node) -> Result<Value, EvalError> {
             a.iter_mut().zip(&b).for_each(|(a, b)| *a -= b);
             Ok(Value::Vec2(a))
         }
-        Node::Vec2TimesScalar(a, b) => {
-            let b = evaluate_node(&b)?.try_to_scalar()?;
-            Ok(Value::Vec2(evaluate_node(a)?.try_to_vec2()?.map(|x| x * b)))
+        Node::Vec2TimesScalar(scalar, vector) => {
+            let scalar = evaluate_node(&scalar)?.try_to_scalar()?;
+            Ok(Value::Vec2(evaluate_node(vector)?.try_to_vec2()?.map(|x| x * scalar)))
         }
         Node::MakeVec2(a, b) => Ok(Value::Vec2([
             evaluate_node(a)?.try_to_scalar()?,

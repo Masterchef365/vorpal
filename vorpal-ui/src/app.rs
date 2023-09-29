@@ -413,7 +413,7 @@ impl eframe::App for NodeGraphExample {
             if self.state.graph.nodes.contains_key(node) {
                 let extracted = extract_node(&self.state.graph, node).unwrap();
                 let text = match evaluate_node(&self.state.graph, node) {
-                    Ok(value) => format!("The result is: {:?}\n{:#?}", value, extracted),
+                    Ok(NodeGuiValue(value)) => format!("The result is: {:?}\n{:#?}", value, extracted),
                     Err(err) => format!("Execution error: {}", err),
                 };
                 ctx.debug_painter().text(
