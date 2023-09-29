@@ -15,7 +15,7 @@ pub enum Value {
     Scalar(Scalar),
 }
 
-#[derive(Clone)]
+#[derive(Clone, Debug)]
 pub enum Node {
     Constant(Value),
     MakeVec2(Rc<Node>, Rc<Node>),
