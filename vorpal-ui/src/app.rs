@@ -20,7 +20,7 @@ pub struct NodeGuiValue(pub Value);
 impl NodeGuiValue {
     /// Tries to downcast this value type to a vector
     fn try_to_vec2(self) -> anyhow::Result<egui::Vec2> {
-        if let Self(Value::Vec2 { value }) = self {
+        if let Self(Value::Vec2(value)) = self {
             Ok(value.into())
         } else {
             anyhow::bail!("Invalid cast from {:?} to vec2", self)
@@ -29,7 +29,7 @@ impl NodeGuiValue {
 
     /// Tries to downcast this value type to a scalar
     fn try_to_scalar(self) -> anyhow::Result<f32> {
-        if let Self(Value::Scalar { value }) = self {
+        if let Self(Value::Scalar(value)) = self {
             Ok(value)
         } else {
             anyhow::bail!("Invalid cast from {:?} to scalar", self)
@@ -150,7 +150,7 @@ impl NodeTemplateTrait for MyNodeTemplate {
                 node_id,
                 name.to_string(),
                 DataType::Scalar,
-                NodeGuiValue(Value::Scalar { value: 0.0 }),
+                NodeGuiValue(Value::Scalar(0.0)),
                 InputParamKind::ConnectionOrConstant,
                 true,
             );
@@ -160,9 +160,9 @@ impl NodeTemplateTrait for MyNodeTemplate {
                 node_id,
                 name.to_string(),
                 DataType::Vec2,
-                NodeGuiValue(Value::Vec2 {
-                    value: [0.0, 0.0],
-                }),
+                NodeGuiValue(Value::Vec2(
+                    [0.0, 0.0]
+                )),
                 InputParamKind::ConnectionOrConstant,
                 true,
             );
@@ -187,7 +187,7 @@ impl NodeTemplateTrait for MyNodeTemplate {
                     // The data type for this input. In this case, a scalar
                     DataType::Scalar,
                     // The value type for this input. We store zero as default
-                    NodeGuiValue(Value::Scalar { value: 0.0 }),
+                    NodeGuiValue(Value::Scalar(0.0)),
                     // The input parameter kind. This allows defining whether a
                     // parameter accepts input connections and/or an inline
                     // widget to set its value.
@@ -265,7 +265,7 @@ impl WidgetValueTrait for NodeGuiValue {
         // This trait is used to tell the library which UI to display for the
         // inline parameter widgets.
         match self {
-            Self(Value::Vec2 { value }) => {
+            Self(Value::Vec2(value)) => {
                 ui.label(param_name);
                 ui.horizontal(|ui| {
                     ui.label("x");
@@ -274,7 +274,7 @@ impl WidgetValueTrait for NodeGuiValue {
                     ui.add(DragValue::new(&mut value[1]));
                 });
             }
-            Self(Value::Scalar { value }) => {
+            Self(Value::Scalar(value)) => {
                 ui.horizontal(|ui| {
                     ui.label(param_name);
                     ui.add(DragValue::new(value));
@@ -487,10 +487,10 @@ pub fn evaluate_node(
             self.evaluate_input(name)?.try_to_scalar()
         }
         fn output_vector(&mut self, name: &str, value: egui::Vec2) -> anyhow::Result<NodeGuiValue> {
-            self.populate_output(name, NodeGuiValue(Value::Vec2 { value: value.into() }))
+            self.populate_output(name, NodeGuiValue(Value::Vec2(value.into())))
         }
         fn output_scalar(&mut self, name: &str, value: f32) -> anyhow::Result<NodeGuiValue> {
-            self.populate_output(name, NodeGuiValue(Value::Scalar { value }))
+            self.populate_output(name, NodeGuiValue(Value::Scalar(value)))
         }
     }
 
@@ -584,6 +584,6 @@ impl Default for NodeGuiValue {
     fn default() -> Self {
         // NOTE: This is just a dummy `Default` implementation. The nodge graph library
         // requires it to circumvent some internal borrow checker issues.
-        Self(Value::Scalar { value: 0.0 })
+        Self(Value::Scalar(0.0))
     }
 }
