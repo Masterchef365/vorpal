@@ -1,0 +1,22 @@
+[package]
+name = "vorpal-ui"
+version = "0.1.0"
+authors = ["Masterchef365 <duncan.freeman1@gmail.com>"]
+edition = "2021"
+rust-version = "1.56"
+
+[lib]
+crate-type = ["cdylib", "rlib"]
+
+[dependencies]
+eframe = "0.22"
+egui_node_graph = { git = "https://github.com/Masterchef365/egui_node_graph.git", branch = "node-zoom" }
+anyhow = "1.0"
+serde = { version = "1.0", optional = true }
+
+[features]
+default = []
+persistence = ["serde", "egui_node_graph/persistence", "eframe/persistence"]
+
+[profile.release]
+opt-level = 2 # fast and small wasm
