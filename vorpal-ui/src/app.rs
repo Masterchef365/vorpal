@@ -513,7 +513,9 @@ fn get_input_node(
 
     // The output of another node is connected.
     if let Some(other_output_id) = graph.connection(input_id) {
-        extract_node_recursive(graph, graph[other_output_id].node, cache)
+        let node = extract_node_recursive(graph, graph[other_output_id].node, cache)?;
+        cache.insert(other_output_id, node.clone());
+        Ok(node)
     }
     // No existing connection, take the inline value instead.
     else {
