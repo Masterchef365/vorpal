@@ -1,4 +1,8 @@
-use std::{borrow::Cow, collections::HashMap, rc::Rc};
+use std::{
+    borrow::Cow,
+    collections::{HashMap, HashSet},
+    rc::Rc,
+};
 
 use eframe::egui::{self, DragValue, TextStyle};
 use egui_node_graph::*;
@@ -160,9 +164,7 @@ impl NodeTemplateTrait for MyNodeTemplate {
                 node_id,
                 name.to_string(),
                 DataType::Vec2,
-                NodeGuiValue(Value::Vec2(
-                    [0.0, 0.0]
-                )),
+                NodeGuiValue(Value::Vec2([0.0, 0.0])),
                 InputParamKind::ConnectionOrConstant,
                 true,
             );
@@ -411,11 +413,20 @@ impl eframe::App for NodeGraphExample {
 
         if let Some(node) = self.user_state.active_node {
             if self.state.graph.nodes.contains_key(node) {
-                let extracted = extract_node(&self.state.graph, node).unwrap();
-                let text = match evaluate_node(&self.state.graph, node) {
-                    Ok(NodeGuiValue(value)) => format!("The result is: {:?}\n{:#?}", value, extracted),
-                    Err(err) => format!("Execution error: {}", err),
+                let has_cycle = detect_cycle(&self.state.graph, node);
+
+                let text = if has_cycle {
+                    format!("Cycle detected")
+                } else {
+                    let extracted = extract_node(&self.state.graph, node).unwrap();
+                    match evaluate_node(&self.state.graph, node) {
+                        Ok(NodeGuiValue(value)) => {
+                            format!("The result is: {:?}\n{:#?}", value, extracted)
+                        }
+                        Err(err) => format!("Execution error: {}", err),
+                    }
                 };
+
                 ctx.debug_painter().text(
                     egui::pos2(10.0, 35.0),
                     egui::Align2::LEFT_TOP,
@@ -433,17 +444,13 @@ impl eframe::App for NodeGraphExample {
 type OutputsCache = HashMap<OutputId, Rc<vorpal_core::Node>>;
 
 /// Recursively evaluates all dependencies of this node, then evaluates the node itself.
-pub fn evaluate_node(
-    graph: &MyGraph,
-    node_id: NodeId,
-) -> anyhow::Result<NodeGuiValue> {
-    Ok(NodeGuiValue(vorpal_core::evaluate_node(&*extract_node(graph, node_id)?)?))
+pub fn evaluate_node(graph: &MyGraph, node_id: NodeId) -> anyhow::Result<NodeGuiValue> {
+    Ok(NodeGuiValue(vorpal_core::evaluate_node(&*extract_node(
+        graph, node_id,
+    )?)?))
 }
 
-pub fn extract_node(
-    graph: &MyGraph,
-    node_id: NodeId,
-) -> anyhow::Result<Rc<vorpal_core::Node>> {
+pub fn extract_node(graph: &MyGraph, node_id: NodeId) -> anyhow::Result<Rc<vorpal_core::Node>> {
     extract_node_recursive(graph, node_id, &mut OutputsCache::new())
 }
 
@@ -462,45 +469,31 @@ pub fn extract_node_recursive(
     }
 
     Ok(match node.user_data.template {
-        MyNodeTemplate::AddScalar => {
-            Rc::new(vorpal_core::Node::AddScalar(
-                get_input_node(graph, node_id, "A", cache)?,
-                get_input_node(graph, node_id, "B", cache)?
-            ))
-        }
-        MyNodeTemplate::SubtractScalar => {
-            Rc::new(vorpal_core::Node::SubtractScalar(
-                get_input_node(graph, node_id, "A", cache)?,
-                get_input_node(graph, node_id, "B", cache)?
-            ))
-        }
-        MyNodeTemplate::VectorTimesScalar => {
-            Rc::new(vorpal_core::Node::Vec2TimesScalar(
-                get_input_node(graph, node_id, "scalar", cache)?,
-                get_input_node(graph, node_id, "vector", cache)?
-            ))
-        }
-        MyNodeTemplate::AddVector => {
-            Rc::new(vorpal_core::Node::AddVec2(
-                get_input_node(graph, node_id, "v1", cache)?,
-                get_input_node(graph, node_id, "v2", cache)?
-            ))
-        }
-        MyNodeTemplate::SubtractVector => {
-            Rc::new(vorpal_core::Node::SubtractVec2(
-                get_input_node(graph, node_id, "v1", cache)?,
-                get_input_node(graph, node_id, "v2", cache)?
-            ))
-        }
-        MyNodeTemplate::MakeVector => {
-            Rc::new(vorpal_core::Node::MakeVec2(
-                get_input_node(graph, node_id, "x", cache)?,
-                get_input_node(graph, node_id, "y", cache)?
-            ))
-        }
-        MyNodeTemplate::MakeScalar => {
-            get_input_node(graph, node_id, "value", cache)?
-        }
+        MyNodeTemplate::AddScalar => Rc::new(vorpal_core::Node::AddScalar(
+            get_input_node(graph, node_id, "A", cache)?,
+            get_input_node(graph, node_id, "B", cache)?,
+        )),
+        MyNodeTemplate::SubtractScalar => Rc::new(vorpal_core::Node::SubtractScalar(
+            get_input_node(graph, node_id, "A", cache)?,
+            get_input_node(graph, node_id, "B", cache)?,
+        )),
+        MyNodeTemplate::VectorTimesScalar => Rc::new(vorpal_core::Node::Vec2TimesScalar(
+            get_input_node(graph, node_id, "scalar", cache)?,
+            get_input_node(graph, node_id, "vector", cache)?,
+        )),
+        MyNodeTemplate::AddVector => Rc::new(vorpal_core::Node::AddVec2(
+            get_input_node(graph, node_id, "v1", cache)?,
+            get_input_node(graph, node_id, "v2", cache)?,
+        )),
+        MyNodeTemplate::SubtractVector => Rc::new(vorpal_core::Node::SubtractVec2(
+            get_input_node(graph, node_id, "v1", cache)?,
+            get_input_node(graph, node_id, "v2", cache)?,
+        )),
+        MyNodeTemplate::MakeVector => Rc::new(vorpal_core::Node::MakeVec2(
+            get_input_node(graph, node_id, "x", cache)?,
+            get_input_node(graph, node_id, "y", cache)?,
+        )),
+        MyNodeTemplate::MakeScalar => get_input_node(graph, node_id, "value", cache)?,
     })
 }
 
@@ -531,4 +524,31 @@ impl Default for NodeGuiValue {
         // requires it to circumvent some internal borrow checker issues.
         Self(Value::Scalar(0.0))
     }
+}
+
+/// Detects whether there is a cycle in determining the output of the given node
+fn detect_cycle(graph: &MyGraph, node_id: NodeId) -> bool {
+    detect_cycle_recursive(graph, node_id, &mut HashSet::new())
+}
+
+fn detect_cycle_recursive(graph: &MyGraph, node_id: NodeId, stack: &mut HashSet<NodeId>) -> bool {
+    // If we encounter node_id twice in one depth-first sweep of the graph, then we have a cycle!
+    if !stack.insert(dbg!(node_id)) {
+        return true;
+    }
+
+    // For each input to this node
+    for input_id in graph[node_id].input_ids() {
+        // Determine whether the node whoese output this input is connected
+        if let Some(other_output_id) = graph.connection(input_id) {
+            let other_node_id = graph.outputs[other_output_id].node;
+            // Contains a cycle of its own
+            if detect_cycle_recursive(graph, other_node_id, stack) {
+                return true;
+            }
+            stack.remove(&other_node_id);
+        }
+    }
+
+    false
 }
