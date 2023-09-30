@@ -376,7 +376,7 @@ impl NodeGraphExample {
 
 fn undo_if_cycle(input_id: InputId, graph: &mut MyGraph) {
     let node_id = graph.get_input(input_id).node;
-    if dbg!(detect_cycle(graph, node_id)) {
+    if detect_cycle(graph, node_id) {
         graph.remove_connection(input_id);
     }
 }
