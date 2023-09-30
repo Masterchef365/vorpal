@@ -157,7 +157,7 @@ impl NodeTemplateTrait for MyNodeTemplate {
                 NodeGuiValue(Value::Scalar(0.0)),
                 InputParamKind::ConnectionOrConstant,
                 true,
-            );
+            )
         };
         let input_vector = |graph: &mut MyGraph, name: &str| {
             graph.add_input_param(
@@ -167,7 +167,7 @@ impl NodeTemplateTrait for MyNodeTemplate {
                 NodeGuiValue(Value::Vec2([0.0, 0.0])),
                 InputParamKind::ConnectionOrConstant,
                 true,
-            );
+            )
         };
 
         let output_scalar = |graph: &mut MyGraph, name: &str| {
@@ -374,6 +374,13 @@ impl NodeGraphExample {
     }
 }
 
+fn undo_if_cycle(input_id: InputId, graph: &mut MyGraph) {
+    let node_id = graph.get_input(input_id).node;
+    if dbg!(detect_cycle(graph, node_id)) {
+        graph.remove_connection(input_id);
+    }
+}
+
 impl eframe::App for NodeGraphExample {
     #[cfg(feature = "persistence")]
     /// If the persistence function is enabled,
@@ -391,12 +398,19 @@ impl eframe::App for NodeGraphExample {
         });
         let graph_response = egui::CentralPanel::default()
             .show(ctx, |ui| {
-                self.state.draw_graph_editor(
+                let before: HashSet<InputId> = self.state.graph.connections.keys().collect();
+                let resp = self.state.draw_graph_editor(
                     ui,
                     AllMyNodeTemplates,
                     &mut self.user_state,
                     Vec::default(),
-                )
+                );
+                let after: HashSet<InputId> = self.state.graph.connections.keys().collect();
+                if let Some(added) = after.difference(&before).next() {
+                    undo_if_cycle(*added, &mut self.state.graph);
+                }
+
+                resp
             })
             .inner;
         for node_response in graph_response.node_responses {
@@ -533,7 +547,7 @@ fn detect_cycle(graph: &MyGraph, node_id: NodeId) -> bool {
 
 fn detect_cycle_recursive(graph: &MyGraph, node_id: NodeId, stack: &mut HashSet<NodeId>) -> bool {
     // If we encounter node_id twice in one depth-first sweep of the graph, then we have a cycle!
-    if !stack.insert(dbg!(node_id)) {
+    if !stack.insert(node_id) {
         return true;
     }
 
