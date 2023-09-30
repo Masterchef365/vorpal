@@ -21,26 +21,6 @@ pub struct MyNodeData {
 #[derive(Copy, Clone, Debug)]
 pub struct NodeGuiValue(pub Value);
 
-impl NodeGuiValue {
-    /// Tries to downcast this value type to a vector
-    fn try_to_vec2(self) -> anyhow::Result<egui::Vec2> {
-        if let Self(Value::Vec2(value)) = self {
-            Ok(value.into())
-        } else {
-            anyhow::bail!("Invalid cast from {:?} to vec2", self)
-        }
-    }
-
-    /// Tries to downcast this value type to a scalar
-    fn try_to_scalar(self) -> anyhow::Result<f32> {
-        if let Self(Value::Scalar(value)) = self {
-            Ok(value)
-        } else {
-            anyhow::bail!("Invalid cast from {:?} to scalar", self)
-        }
-    }
-}
-
 /// NodeTemplate is a mechanism to define node templates. It's what the graph
 /// will display in the "new node" popup. The user code needs to tell the
 /// library how to convert a NodeTemplate into a Node.
@@ -54,6 +34,7 @@ pub enum MyNodeTemplate {
     AddVector,
     SubtractVector,
     VectorTimesScalar,
+    GetComponent(usize),
 }
 
 /// The response type is used to encode side-effects produced when drawing a
@@ -64,6 +45,7 @@ pub enum MyNodeTemplate {
 pub enum MyResponse {
     SetActiveNode(NodeId),
     ClearActiveNode,
+    SetComponent(NodeId, usize),
 }
 
 /// The graph 'global' state. This state struct is passed around to the node and
@@ -112,6 +94,7 @@ impl NodeTemplateTrait for MyNodeTemplate {
             MyNodeTemplate::AddVector => "Vector add",
             MyNodeTemplate::SubtractVector => "Vector subtract",
             MyNodeTemplate::VectorTimesScalar => "Vector times scalar",
+            MyNodeTemplate::GetComponent(_) => "Get vector component",
         })
     }
 
@@ -123,7 +106,8 @@ impl NodeTemplateTrait for MyNodeTemplate {
             | MyNodeTemplate::SubtractScalar => vec!["Scalar"],
             MyNodeTemplate::MakeVector
             | MyNodeTemplate::AddVector
-            | MyNodeTemplate::SubtractVector => vec!["Vector"],
+            | MyNodeTemplate::SubtractVector
+            | MyNodeTemplate::GetComponent(_) => vec!["Vector"],
             MyNodeTemplate::VectorTimesScalar => vec!["Vector", "Scalar"],
         }
     }
@@ -228,6 +212,10 @@ impl NodeTemplateTrait for MyNodeTemplate {
                 input_scalar(graph, "value");
                 output_scalar(graph, "out");
             }
+            MyNodeTemplate::GetComponent(_) => {
+                input_vector(graph, "vector");
+                output_scalar(graph, "out");
+            }
         }
     }
 }
@@ -248,6 +236,7 @@ impl NodeTemplateIter for AllMyNodeTemplates {
             MyNodeTemplate::AddVector,
             MyNodeTemplate::SubtractVector,
             MyNodeTemplate::VectorTimesScalar,
+            MyNodeTemplate::GetComponent(0),
         ]
     }
 }
@@ -304,7 +293,7 @@ impl NodeDataTrait for MyNodeData {
         &self,
         ui: &mut egui::Ui,
         node_id: NodeId,
-        _graph: &Graph<MyNodeData, DataType, NodeGuiValue>,
+        graph: &Graph<MyNodeData, DataType, NodeGuiValue>,
         user_state: &mut Self::UserState,
     ) -> Vec<NodeResponse<MyResponse, MyNodeData>>
     where
@@ -316,6 +305,21 @@ impl NodeDataTrait for MyNodeData {
         // UIs based on that.
 
         let mut responses = vec![];
+        if let MyNodeTemplate::GetComponent(component) = graph.nodes[node_id].user_data.template {
+            let mut component = component;
+
+            let changed = egui::ComboBox::from_label("Component")
+                .selected_text(format!("{}", if component == 0 { 'x' } else { 'y' }))
+                .show_ui(ui, |ui| {
+                    ui.selectable_value(&mut component, 0, "x").changed() |
+                    ui.selectable_value(&mut component, 1, "y").changed()
+                }).inner;
+
+            if changed == Some(true) {
+                responses.push(NodeResponse::User(MyResponse::SetComponent(node_id, component)));
+            }
+        }
+
         let is_active = user_state
             .active_node
             .map(|id| id == node_id)
@@ -421,6 +425,21 @@ impl eframe::App for NodeGraphExample {
                 match user_event {
                     MyResponse::SetActiveNode(node) => self.user_state.active_node = Some(node),
                     MyResponse::ClearActiveNode => self.user_state.active_node = None,
+                    MyResponse::SetComponent(id, component) => {
+                        if let MyNodeTemplate::GetComponent(num) = &mut self
+                            .state
+                            .graph
+                            .nodes
+                            .get_mut(id)
+                            .unwrap()
+                            .user_data
+                            .template
+                        {
+                            *num = component;
+                        } else {
+                            panic!("Set component on non-getcomponent");
+                        }
+                    }
                 }
             }
         }
@@ -508,6 +527,11 @@ pub fn extract_node_recursive(
             get_input_node(graph, node_id, "y", cache)?,
         )),
         MyNodeTemplate::MakeScalar => get_input_node(graph, node_id, "value", cache)?,
+        MyNodeTemplate::GetComponent(component) => Rc::new(vorpal_core::Node::GetComponent(
+            get_input_node(graph, node_id, "vector", cache)?,
+            component
+        )),
+
     })
 }
 

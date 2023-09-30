@@ -24,6 +24,7 @@ pub enum Node {
     AddVec2(Rc<Node>, Rc<Node>),
     SubtractVec2(Rc<Node>, Rc<Node>),
     Vec2TimesScalar(Rc<Node>, Rc<Node>),
+    GetComponent(Rc<Node>, usize),
 }
 
 pub fn evaluate_node(node: &Node) -> Result<Value, EvalError> {
@@ -49,12 +50,17 @@ pub fn evaluate_node(node: &Node) -> Result<Value, EvalError> {
         }
         Node::Vec2TimesScalar(scalar, vector) => {
             let scalar = evaluate_node(&scalar)?.try_to_scalar()?;
-            Ok(Value::Vec2(evaluate_node(vector)?.try_to_vec2()?.map(|x| x * scalar)))
+            Ok(Value::Vec2(
+                evaluate_node(vector)?.try_to_vec2()?.map(|x| x * scalar),
+            ))
         }
         Node::MakeVec2(a, b) => Ok(Value::Vec2([
             evaluate_node(a)?.try_to_scalar()?,
             evaluate_node(b)?.try_to_scalar()?,
         ])),
+        Node::GetComponent(node, component) => Ok(Value::Scalar(
+            evaluate_node(node)?.try_to_vec2()?[*component],
+        )),
     }
 }
 
