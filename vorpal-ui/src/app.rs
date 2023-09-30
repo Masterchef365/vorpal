@@ -309,6 +309,7 @@ impl NodeDataTrait for MyNodeData {
             let mut component = component;
 
             let changed = egui::ComboBox::from_label("Component")
+                .wrap(true)
                 .selected_text(format!("{}", if component == 0 { 'x' } else { 'y' }))
                 .show_ui(ui, |ui| {
                     ui.selectable_value(&mut component, 0, "x").changed() |
