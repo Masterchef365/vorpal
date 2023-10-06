@@ -73,7 +73,7 @@ pub fn evaluate_node(node: &Node) -> Result<Value, EvalError> {
                 Value::Vec4(arr) => fill(arr)?,
             }
             Ok(val)
-        },
+        }
         _ => todo!(),
     }
 }
@@ -93,14 +93,20 @@ impl std::fmt::Display for EvalError {
     }
 }
 
+impl DataType {
+    pub fn dtype_name(&self) -> &'static str {
+        match self {
+            Self::Scalar => "Scalar",
+            Self::Vec2 => "Vec2",
+            Self::Vec3 => "Vec3",
+            Self::Vec4 => "Vec4",
+        }
+    }
+}
+
 impl std::fmt::Display for DataType {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        match self {
-            Self::Scalar => write!(f, "Scalar"),
-            Self::Vec2 => write!(f, "Vec2"),
-            Self::Vec3 => write!(f, "Vec3"),
-            Self::Vec4 => write!(f, "Vec4"),
-        }
+        write!(f, "{}", self.dtype_name())
     }
 }
 
@@ -141,7 +147,6 @@ impl Value {
         }
     }
 }
-
 
 macro_rules! impl_value_try_into {
     ($target_type:ty, $enum_variant:ident) => {
@@ -202,4 +207,3 @@ impl DataType {
         }
     }
 }
-

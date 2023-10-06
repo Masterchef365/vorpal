@@ -91,25 +91,18 @@ impl NodeTemplateTrait for MyNodeTemplate {
             Self::Make(dtype) => format!("Make {dtype}"),
             Self::ComponentInfixOp(infix, dtype) => format!("Operator {infix} ({dtype})"),
             Self::ComponentFn(func, dtype) => format!("Function {func} ({dtype})"),
-            Self::GetComponent(dype) => format!("Get component ({dtype})"),
+            Self::GetComponent(dtype) => format!("Get component ({dtype})"),
         })
     }
 
     // this is what allows the library to show collapsible lists in the node finder.
     fn node_finder_categories(&self, _user_state: &mut Self::UserState) -> Vec<&'static str> {
-        /*
         match self {
-            MyNodeTemplate::MakeScalar
-            | MyNodeTemplate::AddScalar
-            | MyNodeTemplate::SubtractScalar => vec!["Scalar"],
-            MyNodeTemplate::MakeVector
-            | MyNodeTemplate::AddVector
-            | MyNodeTemplate::SubtractVector
-            | MyNodeTemplate::GetComponent(_) => vec!["Vector"],
-            MyNodeTemplate::VectorTimesScalar => vec!["Vector", "Scalar"],
+            MyNodeTemplate::Make(dtype)
+            | MyNodeTemplate::ComponentInfixOp(_, dtype)
+            | MyNodeTemplate::ComponentFn(_, dtype)
+            | MyNodeTemplate::GetComponent(dtype) => vec![dtype.dtype_name()],
         }
-        */
-        todo!()
     }
 
     fn node_graph_label(&self, user_state: &mut Self::UserState) -> String {
@@ -264,7 +257,7 @@ impl NodeDataTrait for MyNodeData {
 
         let mut responses = vec![];
 
-        match &mut self.template {
+        match self.template {
             MyNodeTemplate::ComponentFn(mut func, _dtype) => {
                 let mut updated = false;
                 for val in ComponentFn::all() {
