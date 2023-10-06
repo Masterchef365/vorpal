@@ -61,6 +61,8 @@ impl DataTypeTrait<MyGraphState> for DataType {
         match self {
             DataType::Scalar => egui::Color32::from_rgb(38, 109, 211),
             DataType::Vec2 => egui::Color32::from_rgb(238, 207, 109),
+            DataType::Vec3 => egui::Color32::LIGHT_GREEN,
+            DataType::Vec4 => egui::Color32::DARK_BLUE,
         }
     }
 
@@ -68,6 +70,8 @@ impl DataTypeTrait<MyGraphState> for DataType {
         match self {
             DataType::Scalar => Cow::Borrowed("scalar"),
             DataType::Vec2 => Cow::Borrowed("2d vector"),
+            DataType::Vec3 => Cow::Borrowed("3d vector"),
+            DataType::Vec4 => Cow::Borrowed("4d vector"),
         }
     }
 }
@@ -82,15 +86,12 @@ impl NodeTemplateTrait for MyNodeTemplate {
     type CategoryType = &'static str;
 
     fn node_finder_label(&self, _user_state: &mut Self::UserState) -> Cow<'_, str> {
-        Cow::Borrowed(
-            match self {
-                Self::Make(dtype) => format!("Make {dtype}"),
-                Self::ComponentInfixOp(infix, dtype) => format!("Make {dtype}"),
-                Self::ComponentFn(func, dype) => format!("Funcation {func}"),
-                Self::GetComponent(idx, dype) => format!("Get component {}", idx),
-            }
-            .as_str(),
-        )
+        Cow::Owned(match self {
+            Self::Make(dtype) => format!("Make {dtype}"),
+            Self::ComponentInfixOp(infix, _dtype) => format!("Operator {infix}"),
+            Self::ComponentFn(func, _dype) => format!("Function {func}"),
+            Self::GetComponent(idx, _dype) => format!("Get component {}", idx),
+        })
     }
 
     // this is what allows the library to show collapsible lists in the node finder.
@@ -151,16 +152,16 @@ impl NodeTemplateTrait for MyNodeTemplate {
                 add_input(graph, "value", *dtype);
                 add_output(graph, "out", *dtype);
             }
-            MyNodeTemplate::ComponentFn(func, dtype) => {
+            MyNodeTemplate::ComponentFn(_func, dtype) => {
                 add_input(graph, "x", *dtype);
                 add_output(graph, "out", *dtype);
             }
-            MyNodeTemplate::GetComponent(idx, dtype) => {
+            MyNodeTemplate::GetComponent(_idx, dtype) => {
                 add_input(graph, "x", DataType::Scalar);
                 add_input(graph, "y", *dtype);
                 add_input(graph, "out", DataType::Scalar);
             }
-            MyNodeTemplate::ComponentInfixOp(comp, dtype) => {
+            MyNodeTemplate::ComponentInfixOp(_comp, dtype) => {
                 add_input(graph, "x", *dtype);
                 add_input(graph, "y", *dtype);
                 add_input(graph, "out", *dtype);
@@ -263,7 +264,7 @@ impl NodeDataTrait for MyNodeData {
         // UIs based on that.
 
         let mut responses = vec![];
-        if let MyNodeTemplate::GetComponent(component, dtype) =
+        if let MyNodeTemplate::GetComponent(component, _dtype) =
             graph.nodes[node_id].user_data.template
         {
             let mut component = component;
@@ -390,7 +391,7 @@ impl eframe::App for NodeGraphExample {
                     MyResponse::SetActiveNode(node) => self.user_state.active_node = Some(node),
                     MyResponse::ClearActiveNode => self.user_state.active_node = None,
                     MyResponse::SetComponentIndex(id, component) => {
-                        if let MyNodeTemplate::GetComponent(index, dtype) = &mut self
+                        if let MyNodeTemplate::GetComponent(index, _dtype) = &mut self
                             .state
                             .graph
                             .nodes
@@ -470,7 +471,7 @@ pub fn extract_node_recursive(
             get_input_node(graph, node_id, "A", cache)?,
             get_input_node(graph, node_id, "B", cache)?,
         )),*/
-        MyNodeTemplate::GetComponent(component, dtype) => Rc::new(vorpal_core::Node::Make(
+        MyNodeTemplate::GetComponent(_component, dtype) => Rc::new(vorpal_core::Node::Make(
             vec![get_input_node(graph, node_id, "vector", cache)?],
             dtype,
         )),

@@ -44,6 +44,7 @@ pub enum ComponentFn {
 
 #[derive(Clone, Debug)]
 pub enum Node {
+    Constant(Value),
     Make(Vec<Rc<Node>>, DataType),
     ComponentInfixOp(Rc<Node>, ComponentInfixOp, Rc<Node>),
     ComponentFn(ComponentFn, Rc<Node>),
@@ -57,7 +58,7 @@ pub fn evaluate_node(node: &Node) -> Result<Value, EvalError> {
             let fill = |arr: &mut [f32]| {
                 for (node, out) in nodes.iter().zip(arr) {
                     let part = evaluate_node(node)?;
-                    *out = node.try_to_scalar()?;
+                    *out = part.try_into()?;
                 }
                 Ok(())
             };
