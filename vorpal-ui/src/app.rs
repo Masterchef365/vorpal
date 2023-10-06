@@ -466,35 +466,15 @@ pub fn extract_node_recursive(
     }
 
     Ok(match node.user_data.template {
-        MyNodeTemplate::AddScalar => Rc::new(vorpal_core::Node::AddScalar(
+        /*MyNodeTemplate::AddScalar => Rc::new(vorpal_core::Node::AddScalar(
             get_input_node(graph, node_id, "A", cache)?,
             get_input_node(graph, node_id, "B", cache)?,
+        )),*/
+        MyNodeTemplate::GetComponent(component, dtype) => Rc::new(vorpal_core::Node::Make(
+            vec![get_input_node(graph, node_id, "vector", cache)?],
+            dtype,
         )),
-        MyNodeTemplate::SubtractScalar => Rc::new(vorpal_core::Node::SubtractScalar(
-            get_input_node(graph, node_id, "A", cache)?,
-            get_input_node(graph, node_id, "B", cache)?,
-        )),
-        MyNodeTemplate::VectorTimesScalar => Rc::new(vorpal_core::Node::Vec2TimesScalar(
-            get_input_node(graph, node_id, "scalar", cache)?,
-            get_input_node(graph, node_id, "vector", cache)?,
-        )),
-        MyNodeTemplate::AddVector => Rc::new(vorpal_core::Node::AddVec2(
-            get_input_node(graph, node_id, "v1", cache)?,
-            get_input_node(graph, node_id, "v2", cache)?,
-        )),
-        MyNodeTemplate::SubtractVector => Rc::new(vorpal_core::Node::SubtractVec2(
-            get_input_node(graph, node_id, "v1", cache)?,
-            get_input_node(graph, node_id, "v2", cache)?,
-        )),
-        MyNodeTemplate::MakeVector => Rc::new(vorpal_core::Node::MakeVec2(
-            get_input_node(graph, node_id, "x", cache)?,
-            get_input_node(graph, node_id, "y", cache)?,
-        )),
-        MyNodeTemplate::MakeScalar => get_input_node(graph, node_id, "value", cache)?,
-        MyNodeTemplate::GetComponent(component) => Rc::new(vorpal_core::Node::GetComponent(
-            get_input_node(graph, node_id, "vector", cache)?,
-            component,
-        )),
+        _ => todo!(),
     })
 }
 

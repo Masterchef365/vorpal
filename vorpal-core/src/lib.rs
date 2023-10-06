@@ -5,7 +5,7 @@ type Vec2 = [f32; 2];
 type Vec3 = [f32; 3];
 type Vec4 = [f32; 4];
 
-#[derive(PartialEq, Eq, Clone, Copy)]
+#[derive(PartialEq, Eq, Clone, Copy, Debug)]
 pub enum DataType {
     Scalar,
     Vec2,
@@ -44,10 +44,7 @@ pub enum ComponentFn {
 
 #[derive(Clone, Debug)]
 pub enum Node {
-    Constant(Value),
-    MakeVec2([Rc<Node>; 2]),
-    MakeVec3([Rc<Node>; 3]),
-    MakeVec4([Rc<Node>; 4]),
+    Make(Vec<Rc<Node>>, DataType),
     ComponentInfixOp(Rc<Node>, ComponentInfixOp, Rc<Node>),
     ComponentFn(ComponentFn, Rc<Node>),
     GetComponent(Rc<Node>, usize),
@@ -55,7 +52,27 @@ pub enum Node {
 
 pub fn evaluate_node(node: &Node) -> Result<Value, EvalError> {
     match node {
-        Node::Constant(value) => Ok(*value),
+        Node::Make(nodes, dtype) => {
+            let mut val = Value::default_of_dtype(*dtype);
+            let fill = |arr: &mut [f32]| {
+                for (node, out) in nodes.iter().zip(arr) {
+                    let part = evaluate_node(node)?;
+                    *out = node.try_to_scalar()?;
+                }
+                Ok(())
+            };
+            match &mut val {
+                Value::Scalar(scalar) => {
+                    let mut arr = [*scalar];
+                    fill(&mut arr)?;
+                    *scalar = arr[0];
+                }
+                Value::Vec2(arr) => fill(arr)?,
+                Value::Vec3(arr) => fill(arr)?,
+                Value::Vec4(arr) => fill(arr)?,
+            }
+            Ok(val)
+        },
         _ => todo!(),
     }
 }
@@ -124,6 +141,27 @@ impl Value {
     }
 }
 
+
+macro_rules! impl_value_try_into {
+    ($target_type:ty, $enum_variant:ident) => {
+        impl std::convert::TryInto<$target_type> for Value {
+            type Error = EvalError;
+
+            fn try_into(self) -> Result<$target_type, Self::Error> {
+                match self {
+                    Value::$enum_variant(value) => Ok(value),
+                    _ => Err(EvalError::TypeMismatch),
+                }
+            }
+        }
+    };
+}
+
+impl_value_try_into!(f32, Scalar);
+impl_value_try_into!(Vec2, Vec2);
+impl_value_try_into!(Vec3, Vec3);
+impl_value_try_into!(Vec4, Vec4);
+
 impl ComponentFn {
     pub fn all() -> [Self; 5] {
         [
@@ -163,3 +201,4 @@ impl DataType {
         }
     }
 }
+
