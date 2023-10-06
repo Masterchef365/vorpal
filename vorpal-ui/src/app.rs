@@ -4,7 +4,7 @@ use std::{
     rc::Rc,
 };
 
-use eframe::egui::{self, DragValue, TextStyle};
+use eframe::egui::{self, ComboBox, DragValue, TextStyle};
 use egui_node_graph::*;
 use vorpal_core::*;
 
@@ -151,14 +151,14 @@ impl NodeTemplateTrait for MyNodeTemplate {
                 add_output(graph, "out", *dtype);
             }
             MyNodeTemplate::GetComponent(dtype) => {
-                add_input(graph, "x", DataType::Scalar);
-                add_input(graph, "y", *dtype);
-                add_input(graph, "out", DataType::Scalar);
+                add_input(graph, "value", *dtype);
+                add_input(graph, "index", DataType::Scalar);
+                add_output(graph, "out", DataType::Scalar);
             }
             MyNodeTemplate::ComponentInfixOp(_comp, dtype) => {
                 add_input(graph, "x", *dtype);
                 add_input(graph, "y", *dtype);
-                add_input(graph, "out", *dtype);
+                add_output(graph, "out", *dtype);
             }
         }
     }
@@ -207,10 +207,12 @@ impl WidgetValueTrait for NodeGuiValue {
         ui.label(param_name);
 
         let mut input_vector = |vector: &mut [f32]| {
-            for (num, name) in vector.iter_mut().zip(xyzw) {
-                ui.label(name);
-                ui.add(DragValue::new(num));
-            }
+            ui.horizontal(|ui| {
+                for (num, name) in vector.iter_mut().zip(xyzw) {
+                    ui.label(name);
+                    ui.add(DragValue::new(num));
+                }
+            });
         };
 
         match self {
@@ -260,27 +262,32 @@ impl NodeDataTrait for MyNodeData {
         match self.template {
             MyNodeTemplate::ComponentFn(mut func, _dtype) => {
                 let mut updated = false;
-                for val in ComponentFn::all() {
-                    updated |= ui
-                        .selectable_value(&mut func, val, val.to_string())
-                        .clicked();
-                }
+                ComboBox::new(node_id, func.to_string()).show_ui(ui, |ui| {
+                    for val in ComponentFn::all() {
+                        updated |= ui
+                            .selectable_value(&mut func, val, val.to_string())
+                            .clicked();
+                    }
+                });
                 if updated {
                     responses.push(NodeResponse::User(MyResponse::SetComponentFn(
                         node_id, func,
                     )));
                 }
             }
-            MyNodeTemplate::ComponentInfixOp(mut func, _dtype) => {
+            MyNodeTemplate::ComponentInfixOp(mut infix, _dtype) => {
                 let mut updated = false;
-                for val in ComponentInfixOp::all() {
-                    updated |= ui
-                        .selectable_value(&mut func, val, val.to_string())
-                        .clicked();
-                }
+                ComboBox::new(node_id, infix.to_string()).show_ui(ui, |ui| {
+                    for val in ComponentInfixOp::all() {
+                        updated |= ui
+                            .selectable_value(&mut infix, val, val.to_string())
+                            .clicked();
+                    }
+                });
+
                 if updated {
                     responses.push(NodeResponse::User(MyResponse::SetComponentInfixOp(
-                        node_id, func,
+                        node_id, infix,
                     )));
                 }
             }
@@ -473,8 +480,8 @@ pub fn extract_node_recursive(
             get_input_node(graph, node_id, "x", cache)?,
         )),
         MyNodeTemplate::GetComponent(_dtype) => Rc::new(vorpal_core::Node::GetComponent(
-            get_input_node(graph, node_id, "x", cache)?,
-            get_input_node(graph, node_id, "y", cache)?,
+            get_input_node(graph, node_id, "value", cache)?,
+            get_input_node(graph, node_id, "index", cache)?,
         )),
         MyNodeTemplate::ComponentInfixOp(op, _dtype) => {
             Rc::new(vorpal_core::Node::ComponentInfixOp(

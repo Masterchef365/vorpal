@@ -52,6 +52,16 @@ pub enum Node {
 }
 
 pub fn evaluate_node(node: &Node) -> Result<Value, EvalError> {
+    fn comp_infix<const N: usize>(mut a: [f32; N], infix: ComponentInfixOp, b: [f32; N]) -> [f32; N] {
+        a.iter_mut().zip(&b).for_each(|(a, b)| *a = infix.native(*a, *b));
+        a
+    }
+
+    fn comp_func<const N: usize>(mut x: [f32; N], func: ComponentFn) -> [f32; N] {
+        x.iter_mut().for_each(|x| *x = func.native(*x));
+        x
+    }
+
     match node {
         Node::Make(nodes, dtype) => {
             let mut val = Value::default_of_dtype(*dtype);
@@ -74,7 +84,39 @@ pub fn evaluate_node(node: &Node) -> Result<Value, EvalError> {
             }
             Ok(val)
         }
-        _ => todo!(),
+        Node::Constant(value) => Ok(value.clone()),
+        Node::ComponentInfixOp(a, op, b) => {
+            match (evaluate_node(a)?, evaluate_node(b)?) {
+                (Value::Scalar(a), Value::Scalar(b)) => Ok(Value::Scalar(comp_infix([a], *op, [b])[0])),
+                (Value::Vec2(a), Value::Vec2(b)) => Ok(Value::Vec2(comp_infix(a, *op, b))),
+                (Value::Vec3(a), Value::Vec3(b)) => Ok(Value::Vec3(comp_infix(a, *op, b))),
+                (Value::Vec4(a), Value::Vec4(b)) => Ok(Value::Vec4(comp_infix(a, *op, b))),
+                _ => Err(EvalError::TypeMismatch),
+            }
+        }
+        Node::ComponentFn(func, a) => {
+            match evaluate_node(a)? {
+                Value::Scalar(a) => Ok(Value::Scalar(comp_func([a], *func)[0])),
+                Value::Vec2(a) => Ok(Value::Vec2(comp_func(a, *func))),
+                Value::Vec3(a) => Ok(Value::Vec3(comp_func(a, *func))),
+                Value::Vec4(a) => Ok(Value::Vec4(comp_func(a, *func))),
+            }
+        }
+        Node::GetComponent(value, index) => {
+            let value = evaluate_node(value)?;
+            if let Value::Scalar(index) = evaluate_node(index)? {
+                let index = index.clamp(0., value.dtype().lanes() as f32);
+                let index = (index as usize).clamp(0, value.dtype().lanes() - 1);
+                Ok(Value::Scalar(match value {
+                    Value::Scalar(val) => val,
+                    Value::Vec2(arr) => arr[index],
+                    Value::Vec3(arr) => arr[index],
+                    Value::Vec4(arr) => arr[index],
+                }))
+            } else {
+                Err(EvalError::TypeMismatch)
+            }
+        }
     }
 }
 
@@ -146,6 +188,15 @@ impl Value {
             DataType::Vec4 => Value::Vec4([0.0; 4]),
         }
     }
+
+    pub fn dtype(&self) -> DataType {
+        match self {
+            Self::Scalar(_) => DataType::Scalar,
+            Self::Vec2(_) => DataType::Vec2,
+            Self::Vec3(_) => DataType::Vec3,
+            Self::Vec4(_) => DataType::Vec4,
+        }
+    }
 }
 
 macro_rules! impl_value_try_into {
@@ -178,6 +229,16 @@ impl ComponentFn {
             Self::NaturalExp,
         ]
     }
+
+    pub fn native(&self, x: f32) -> f32 {
+        match self {
+            Self::Cosine => x.cos(),
+            Self::Sine => x.sin(),
+            Self::Tangent => x.tan(),
+            Self::NaturalLog => x.ln(),
+            Self::NaturalExp => x.exp(),
+        }
+    }
 }
 
 impl ComponentInfixOp {
@@ -190,6 +251,17 @@ impl ComponentInfixOp {
             Self::Power,
             Self::Logbase,
         ]
+    }
+
+    pub fn native(&self, a: f32, b: f32) -> f32 {
+        match self {
+            Self::Add => a + b,
+            Self::Subtract => a - b,
+            Self::Multiply => a * b,
+            Self::Divide => a / b,
+            Self::Power => a.powf(b),
+            Self::Logbase => a.log(b),
+        }
     }
 }
 
