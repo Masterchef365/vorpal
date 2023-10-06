@@ -30,7 +30,7 @@ pub enum MyNodeTemplate {
     Make(DataType),
     ComponentInfixOp(ComponentInfixOp, DataType),
     ComponentFn(ComponentFn, DataType),
-    GetComponent(usize, DataType),
+    GetComponent(DataType),
 }
 
 /// The response type is used to encode side-effects produced when drawing a
@@ -41,7 +41,6 @@ pub enum MyNodeTemplate {
 pub enum MyResponse {
     SetActiveNode(NodeId),
     ClearActiveNode,
-    SetComponentIndex(NodeId, usize),
 }
 
 /// The graph 'global' state. This state struct is passed around to the node and
@@ -90,7 +89,7 @@ impl NodeTemplateTrait for MyNodeTemplate {
             Self::Make(dtype) => format!("Make {dtype}"),
             Self::ComponentInfixOp(infix, _dtype) => format!("Operator {infix}"),
             Self::ComponentFn(func, _dype) => format!("Function {func}"),
-            Self::GetComponent(idx, _dype) => format!("Get component {}", idx),
+            Self::GetComponent(_dype) => format!("Get component"),
         })
     }
 
@@ -149,14 +148,14 @@ impl NodeTemplateTrait for MyNodeTemplate {
 
         match self {
             MyNodeTemplate::Make(dtype) => {
-                add_input(graph, "value", *dtype);
+                add_input(graph, "x", *dtype);
                 add_output(graph, "out", *dtype);
             }
             MyNodeTemplate::ComponentFn(_func, dtype) => {
                 add_input(graph, "x", *dtype);
                 add_output(graph, "out", *dtype);
             }
-            MyNodeTemplate::GetComponent(_idx, dtype) => {
+            MyNodeTemplate::GetComponent(dtype) => {
                 add_input(graph, "x", DataType::Scalar);
                 add_input(graph, "y", *dtype);
                 add_input(graph, "out", DataType::Scalar);
@@ -184,9 +183,7 @@ impl NodeTemplateIter for AllMyNodeTemplates {
             for infix in ComponentInfixOp::all() {
                 types.push(MyNodeTemplate::ComponentInfixOp(infix, dtype));
             }
-            for index in 0..dtype.lanes() {
-                types.push(MyNodeTemplate::GetComponent(index, dtype));
-            }
+            types.push(MyNodeTemplate::GetComponent(dtype));
             for func in ComponentFn::all() {
                 types.push(MyNodeTemplate::ComponentFn(func, dtype));
             }
@@ -252,7 +249,7 @@ impl NodeDataTrait for MyNodeData {
         &self,
         ui: &mut egui::Ui,
         node_id: NodeId,
-        graph: &Graph<MyNodeData, DataType, NodeGuiValue>,
+        _graph: &Graph<MyNodeData, DataType, NodeGuiValue>,
         user_state: &mut Self::UserState,
     ) -> Vec<NodeResponse<MyResponse, MyNodeData>>
     where
@@ -264,26 +261,6 @@ impl NodeDataTrait for MyNodeData {
         // UIs based on that.
 
         let mut responses = vec![];
-        if let MyNodeTemplate::GetComponent(component, _dtype) =
-            graph.nodes[node_id].user_data.template
-        {
-            let mut component = component;
-
-            let changed = egui::ComboBox::from_label("Component")
-                .wrap(true)
-                .selected_text(format!("{}", if component == 0 { 'x' } else { 'y' }))
-                .show_ui(ui, |ui| {
-                    ui.selectable_value(&mut component, 0, "x").changed()
-                        | ui.selectable_value(&mut component, 1, "y").changed()
-                })
-                .inner;
-
-            if changed == Some(true) {
-                responses.push(NodeResponse::User(MyResponse::SetComponentIndex(
-                    node_id, component,
-                )));
-            }
-        }
 
         let is_active = user_state
             .active_node
@@ -390,21 +367,6 @@ impl eframe::App for NodeGraphExample {
                 match user_event {
                     MyResponse::SetActiveNode(node) => self.user_state.active_node = Some(node),
                     MyResponse::ClearActiveNode => self.user_state.active_node = None,
-                    MyResponse::SetComponentIndex(id, component) => {
-                        if let MyNodeTemplate::GetComponent(index, _dtype) = &mut self
-                            .state
-                            .graph
-                            .nodes
-                            .get_mut(id)
-                            .unwrap()
-                            .user_data
-                            .template
-                        {
-                            *index = component;
-                        } else {
-                            panic!("Set component on non-getcomponent");
-                        }
-                    }
                 }
             }
         }
@@ -467,15 +429,25 @@ pub fn extract_node_recursive(
     }
 
     Ok(match node.user_data.template {
-        /*MyNodeTemplate::AddScalar => Rc::new(vorpal_core::Node::AddScalar(
-            get_input_node(graph, node_id, "A", cache)?,
-            get_input_node(graph, node_id, "B", cache)?,
-        )),*/
-        MyNodeTemplate::GetComponent(_component, dtype) => Rc::new(vorpal_core::Node::Make(
-            vec![get_input_node(graph, node_id, "vector", cache)?],
+        MyNodeTemplate::ComponentFn(func, _dtype) => Rc::new(vorpal_core::Node::ComponentFn(
+            func,
+            get_input_node(graph, node_id, "x", cache)?,
+        )),
+        MyNodeTemplate::GetComponent(_dtype) => Rc::new(vorpal_core::Node::GetComponent(
+            get_input_node(graph, node_id, "x", cache)?,
+            get_input_node(graph, node_id, "y", cache)?,
+        )),
+        MyNodeTemplate::ComponentInfixOp(op, _dtype) => {
+            Rc::new(vorpal_core::Node::ComponentInfixOp(
+                get_input_node(graph, node_id, "x", cache)?,
+                op,
+                get_input_node(graph, node_id, "y", cache)?,
+            ))
+        }
+        MyNodeTemplate::Make(dtype) => Rc::new(vorpal_core::Node::Make(
+            vec![get_input_node(graph, node_id, "x", cache)?],
             dtype,
         )),
-        _ => todo!(),
     })
 }
 

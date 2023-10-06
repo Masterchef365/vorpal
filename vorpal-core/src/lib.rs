@@ -48,7 +48,7 @@ pub enum Node {
     Make(Vec<Rc<Node>>, DataType),
     ComponentInfixOp(Rc<Node>, ComponentInfixOp, Rc<Node>),
     ComponentFn(ComponentFn, Rc<Node>),
-    GetComponent(Rc<Node>, usize),
+    GetComponent(Rc<Node>, Rc<Node>),
 }
 
 pub fn evaluate_node(node: &Node) -> Result<Value, EvalError> {
