@@ -27,14 +27,10 @@ pub struct NodeGuiValue(pub Value);
 #[derive(Clone, Copy)]
 #[cfg_attr(feature = "persistence", derive(serde::Serialize, serde::Deserialize))]
 pub enum MyNodeTemplate {
-    MakeScalar,
-    AddScalar,
-    SubtractScalar,
-    MakeVector,
-    AddVector,
-    SubtractVector,
-    VectorTimesScalar,
-    GetComponent(usize),
+    Make(DataType),
+    ComponentInfixOp(ComponentInfixOp, DataType),
+    ComponentFn(ComponentFn, DataType),
+    GetComponent(usize, DataType),
 }
 
 /// The response type is used to encode side-effects produced when drawing a
@@ -45,7 +41,7 @@ pub enum MyNodeTemplate {
 pub enum MyResponse {
     SetActiveNode(NodeId),
     ClearActiveNode,
-    SetComponent(NodeId, usize),
+    SetComponentIndex(NodeId, usize),
 }
 
 /// The graph 'global' state. This state struct is passed around to the node and
@@ -86,20 +82,20 @@ impl NodeTemplateTrait for MyNodeTemplate {
     type CategoryType = &'static str;
 
     fn node_finder_label(&self, _user_state: &mut Self::UserState) -> Cow<'_, str> {
-        Cow::Borrowed(match self {
-            MyNodeTemplate::MakeScalar => "New scalar",
-            MyNodeTemplate::AddScalar => "Scalar add",
-            MyNodeTemplate::SubtractScalar => "Scalar subtract",
-            MyNodeTemplate::MakeVector => "New vector",
-            MyNodeTemplate::AddVector => "Vector add",
-            MyNodeTemplate::SubtractVector => "Vector subtract",
-            MyNodeTemplate::VectorTimesScalar => "Vector times scalar",
-            MyNodeTemplate::GetComponent(_) => "Get vector component",
-        })
+        Cow::Borrowed(
+            match self {
+                Self::Make(dtype) => format!("Make {dtype}"),
+                Self::ComponentInfixOp(infix, dtype) => format!("Make {dtype}"),
+                Self::ComponentFn(func, dype) => format!("Funcation {func}"),
+                Self::GetComponent(idx, dype) => format!("Get component {}", idx),
+            }
+            .as_str(),
+        )
     }
 
     // this is what allows the library to show collapsible lists in the node finder.
     fn node_finder_categories(&self, _user_state: &mut Self::UserState) -> Vec<&'static str> {
+        /*
         match self {
             MyNodeTemplate::MakeScalar
             | MyNodeTemplate::AddScalar
@@ -110,6 +106,8 @@ impl NodeTemplateTrait for MyNodeTemplate {
             | MyNodeTemplate::GetComponent(_) => vec!["Vector"],
             MyNodeTemplate::VectorTimesScalar => vec!["Vector", "Scalar"],
         }
+        */
+        todo!()
     }
 
     fn node_graph_label(&self, user_state: &mut Self::UserState) -> String {
@@ -133,88 +131,39 @@ impl NodeTemplateTrait for MyNodeTemplate {
 
         // We define some closures here to avoid boilerplate. Note that this is
         // entirely optional.
-        let input_scalar = |graph: &mut MyGraph, name: &str| {
+        let add_input = |graph: &mut MyGraph, name: &str, dtype: DataType| {
             graph.add_input_param(
                 node_id,
                 name.to_string(),
-                DataType::Scalar,
-                NodeGuiValue(Value::Scalar(0.0)),
-                InputParamKind::ConnectionOrConstant,
-                true,
-            )
-        };
-        let input_vector = |graph: &mut MyGraph, name: &str| {
-            graph.add_input_param(
-                node_id,
-                name.to_string(),
-                DataType::Vec2,
-                NodeGuiValue(Value::Vec2([0.0, 0.0])),
+                dtype,
+                NodeGuiValue(Value::default_of_dtype(dtype)),
                 InputParamKind::ConnectionOrConstant,
                 true,
             )
         };
 
-        let output_scalar = |graph: &mut MyGraph, name: &str| {
-            graph.add_output_param(node_id, name.to_string(), DataType::Scalar);
-        };
-        let output_vector = |graph: &mut MyGraph, name: &str| {
-            graph.add_output_param(node_id, name.to_string(), DataType::Vec2);
+        let add_output = |graph: &mut MyGraph, name: &str, dtype: DataType| {
+            graph.add_output_param(node_id, name.to_string(), dtype);
         };
 
         match self {
-            MyNodeTemplate::AddScalar => {
-                // The first input param doesn't use the closure so we can comment
-                // it in more detail.
-                graph.add_input_param(
-                    node_id,
-                    // This is the name of the parameter. Can be later used to
-                    // retrieve the value. Parameter names should be unique.
-                    "A".into(),
-                    // The data type for this input. In this case, a scalar
-                    DataType::Scalar,
-                    // The value type for this input. We store zero as default
-                    NodeGuiValue(Value::Scalar(0.0)),
-                    // The input parameter kind. This allows defining whether a
-                    // parameter accepts input connections and/or an inline
-                    // widget to set its value.
-                    InputParamKind::ConnectionOrConstant,
-                    true,
-                );
-                input_scalar(graph, "B");
-                output_scalar(graph, "out");
+            MyNodeTemplate::Make(dtype) => {
+                add_input(graph, "value", *dtype);
+                add_output(graph, "out", *dtype);
             }
-            MyNodeTemplate::SubtractScalar => {
-                input_scalar(graph, "A");
-                input_scalar(graph, "B");
-                output_scalar(graph, "out");
+            MyNodeTemplate::ComponentFn(func, dtype) => {
+                add_input(graph, "x", *dtype);
+                add_output(graph, "out", *dtype);
             }
-            MyNodeTemplate::VectorTimesScalar => {
-                input_scalar(graph, "scalar");
-                input_vector(graph, "vector");
-                output_vector(graph, "out");
+            MyNodeTemplate::GetComponent(idx, dtype) => {
+                add_input(graph, "x", DataType::Scalar);
+                add_input(graph, "y", *dtype);
+                add_input(graph, "out", DataType::Scalar);
             }
-            MyNodeTemplate::AddVector => {
-                input_vector(graph, "v1");
-                input_vector(graph, "v2");
-                output_vector(graph, "out");
-            }
-            MyNodeTemplate::SubtractVector => {
-                input_vector(graph, "v1");
-                input_vector(graph, "v2");
-                output_vector(graph, "out");
-            }
-            MyNodeTemplate::MakeVector => {
-                input_scalar(graph, "x");
-                input_scalar(graph, "y");
-                output_vector(graph, "out");
-            }
-            MyNodeTemplate::MakeScalar => {
-                input_scalar(graph, "value");
-                output_scalar(graph, "out");
-            }
-            MyNodeTemplate::GetComponent(_) => {
-                input_vector(graph, "vector");
-                output_scalar(graph, "out");
+            MyNodeTemplate::ComponentInfixOp(comp, dtype) => {
+                add_input(graph, "x", *dtype);
+                add_input(graph, "y", *dtype);
+                add_input(graph, "out", *dtype);
             }
         }
     }
@@ -228,16 +177,21 @@ impl NodeTemplateIter for AllMyNodeTemplates {
         // This function must return a list of node kinds, which the node finder
         // will use to display it to the user. Crates like strum can reduce the
         // boilerplate in enumerating all variants of an enum.
-        vec![
-            MyNodeTemplate::MakeScalar,
-            MyNodeTemplate::MakeVector,
-            MyNodeTemplate::AddScalar,
-            MyNodeTemplate::SubtractScalar,
-            MyNodeTemplate::AddVector,
-            MyNodeTemplate::SubtractVector,
-            MyNodeTemplate::VectorTimesScalar,
-            MyNodeTemplate::GetComponent(0),
-        ]
+        let mut types = vec![];
+        for dtype in DataType::all() {
+            types.push(MyNodeTemplate::Make(dtype));
+            for infix in ComponentInfixOp::all() {
+                types.push(MyNodeTemplate::ComponentInfixOp(infix, dtype));
+            }
+            for index in 0..dtype.lanes() {
+                types.push(MyNodeTemplate::GetComponent(index, dtype));
+            }
+            for func in ComponentFn::all() {
+                types.push(MyNodeTemplate::ComponentFn(func, dtype));
+            }
+        }
+
+        types
     }
 }
 
@@ -255,19 +209,23 @@ impl WidgetValueTrait for NodeGuiValue {
     ) -> Vec<MyResponse> {
         // This trait is used to tell the library which UI to display for the
         // inline parameter widgets.
-        match self {
-            Self(Value::Vec2(value)) => {
-                ui.label(param_name);
-                ui.horizontal(|ui| {
-                    ui.label("x");
-                    ui.add(DragValue::new(&mut value[0]));
-                    ui.label("y");
-                    ui.add(DragValue::new(&mut value[1]));
-                });
+        let xyzw = ["x", "y", "z", "w"];
+
+        ui.label(param_name);
+
+        let mut input_vector = |vector: &mut [f32]| {
+            for (num, name) in vector.iter_mut().zip(xyzw) {
+                ui.label(name);
+                ui.add(DragValue::new(num));
             }
+        };
+
+        match self {
+            Self(Value::Vec2(value)) => input_vector(value),
+            Self(Value::Vec3(value)) => input_vector(value),
+            Self(Value::Vec4(value)) => input_vector(value),
             Self(Value::Scalar(value)) => {
                 ui.horizontal(|ui| {
-                    ui.label(param_name);
                     ui.add(DragValue::new(value));
                 });
             }
@@ -305,19 +263,24 @@ impl NodeDataTrait for MyNodeData {
         // UIs based on that.
 
         let mut responses = vec![];
-        if let MyNodeTemplate::GetComponent(component) = graph.nodes[node_id].user_data.template {
+        if let MyNodeTemplate::GetComponent(component, dtype) =
+            graph.nodes[node_id].user_data.template
+        {
             let mut component = component;
 
             let changed = egui::ComboBox::from_label("Component")
                 .wrap(true)
                 .selected_text(format!("{}", if component == 0 { 'x' } else { 'y' }))
                 .show_ui(ui, |ui| {
-                    ui.selectable_value(&mut component, 0, "x").changed() |
-                    ui.selectable_value(&mut component, 1, "y").changed()
-                }).inner;
+                    ui.selectable_value(&mut component, 0, "x").changed()
+                        | ui.selectable_value(&mut component, 1, "y").changed()
+                })
+                .inner;
 
             if changed == Some(true) {
-                responses.push(NodeResponse::User(MyResponse::SetComponent(node_id, component)));
+                responses.push(NodeResponse::User(MyResponse::SetComponentIndex(
+                    node_id, component,
+                )));
             }
         }
 
@@ -426,8 +389,8 @@ impl eframe::App for NodeGraphExample {
                 match user_event {
                     MyResponse::SetActiveNode(node) => self.user_state.active_node = Some(node),
                     MyResponse::ClearActiveNode => self.user_state.active_node = None,
-                    MyResponse::SetComponent(id, component) => {
-                        if let MyNodeTemplate::GetComponent(num) = &mut self
+                    MyResponse::SetComponentIndex(id, component) => {
+                        if let MyNodeTemplate::GetComponent(index, dtype) = &mut self
                             .state
                             .graph
                             .nodes
@@ -436,7 +399,7 @@ impl eframe::App for NodeGraphExample {
                             .user_data
                             .template
                         {
-                            *num = component;
+                            *index = component;
                         } else {
                             panic!("Set component on non-getcomponent");
                         }
@@ -530,9 +493,8 @@ pub fn extract_node_recursive(
         MyNodeTemplate::MakeScalar => get_input_node(graph, node_id, "value", cache)?,
         MyNodeTemplate::GetComponent(component) => Rc::new(vorpal_core::Node::GetComponent(
             get_input_node(graph, node_id, "vector", cache)?,
-            component
+            component,
         )),
-
     })
 }
 
