@@ -89,8 +89,8 @@ impl NodeTemplateTrait for MyNodeTemplate {
     fn node_finder_label(&self, _user_state: &mut Self::UserState) -> Cow<'_, str> {
         Cow::Owned(match self {
             Self::Make(dtype) => format!("Make {dtype}"),
-            Self::ComponentInfixOp(infix, dtype) => format!("Operator {infix} ({dtype})"),
-            Self::ComponentFn(func, dtype) => format!("Function {func} ({dtype})"),
+            Self::ComponentInfixOp(_infix, dtype) => format!("Operator ({dtype})"),
+            Self::ComponentFn(_func, dtype) => format!("Function ({dtype})"),
             Self::GetComponent(dtype) => format!("Get component ({dtype})"),
         })
     }
@@ -175,13 +175,12 @@ impl NodeTemplateIter for AllMyNodeTemplates {
         let mut types = vec![];
         for dtype in DataType::all() {
             types.push(MyNodeTemplate::Make(dtype));
-            for infix in ComponentInfixOp::all() {
-                types.push(MyNodeTemplate::ComponentInfixOp(infix, dtype));
-            }
+            types.push(MyNodeTemplate::ComponentInfixOp(
+                ComponentInfixOp::Add,
+                dtype,
+            ));
             types.push(MyNodeTemplate::GetComponent(dtype));
-            for func in ComponentFn::all() {
-                types.push(MyNodeTemplate::ComponentFn(func, dtype));
-            }
+            types.push(MyNodeTemplate::ComponentFn(ComponentFn::NaturalLog, dtype));
         }
 
         types
@@ -262,13 +261,15 @@ impl NodeDataTrait for MyNodeData {
         match self.template {
             MyNodeTemplate::ComponentFn(mut func, _dtype) => {
                 let mut updated = false;
-                ComboBox::new(node_id, func.to_string()).show_ui(ui, |ui| {
-                    for val in ComponentFn::all() {
-                        updated |= ui
-                            .selectable_value(&mut func, val, val.to_string())
-                            .clicked();
-                    }
-                });
+                ComboBox::new(node_id, "Function")
+                    .selected_text(func.to_string())
+                    .show_ui(ui, |ui| {
+                        for val in ComponentFn::all() {
+                            updated |= ui
+                                .selectable_value(&mut func, val, val.to_string())
+                                .clicked();
+                        }
+                    });
                 if updated {
                     responses.push(NodeResponse::User(MyResponse::SetComponentFn(
                         node_id, func,
@@ -277,13 +278,15 @@ impl NodeDataTrait for MyNodeData {
             }
             MyNodeTemplate::ComponentInfixOp(mut infix, _dtype) => {
                 let mut updated = false;
-                ComboBox::new(node_id, infix.to_string()).show_ui(ui, |ui| {
-                    for val in ComponentInfixOp::all() {
-                        updated |= ui
-                            .selectable_value(&mut infix, val, val.to_string())
-                            .clicked();
-                    }
-                });
+                ComboBox::new(node_id, "Operation")
+                    .selected_text(infix.to_string())
+                    .show_ui(ui, |ui| {
+                        for val in ComponentInfixOp::all() {
+                            updated |= ui
+                                .selectable_value(&mut infix, val, val.to_string())
+                                .clicked();
+                        }
+                    });
 
                 if updated {
                     responses.push(NodeResponse::User(MyResponse::SetComponentInfixOp(
