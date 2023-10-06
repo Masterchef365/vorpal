@@ -22,7 +22,7 @@ pub enum Value {
 }
 
 /// Componentwise infix operation
-#[derive(Copy, Clone, Debug, PartialEq)]
+#[derive(Copy, Clone, Debug, PartialEq, Eq)]
 pub enum ComponentInfixOp {
     Add,
     Subtract,
@@ -33,7 +33,7 @@ pub enum ComponentInfixOp {
 }
 
 /// Function on components
-#[derive(Copy, Clone, Debug, PartialEq)]
+#[derive(Copy, Clone, Debug, PartialEq, Eq)]
 pub enum ComponentFn {
     Cosine,
     Sine,

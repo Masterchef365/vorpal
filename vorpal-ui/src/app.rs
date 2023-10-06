@@ -41,6 +41,8 @@ pub enum MyNodeTemplate {
 pub enum MyResponse {
     SetActiveNode(NodeId),
     ClearActiveNode,
+    SetComponentInfixOp(NodeId, ComponentInfixOp),
+    SetComponentFn(NodeId, ComponentFn),
 }
 
 /// The graph 'global' state. This state struct is passed around to the node and
@@ -87,9 +89,9 @@ impl NodeTemplateTrait for MyNodeTemplate {
     fn node_finder_label(&self, _user_state: &mut Self::UserState) -> Cow<'_, str> {
         Cow::Owned(match self {
             Self::Make(dtype) => format!("Make {dtype}"),
-            Self::ComponentInfixOp(infix, _dtype) => format!("Operator {infix}"),
-            Self::ComponentFn(func, _dype) => format!("Function {func}"),
-            Self::GetComponent(_dype) => format!("Get component"),
+            Self::ComponentInfixOp(infix, dtype) => format!("Operator {infix} ({dtype})"),
+            Self::ComponentFn(func, dtype) => format!("Function {func} ({dtype})"),
+            Self::GetComponent(dype) => format!("Get component ({dtype})"),
         })
     }
 
@@ -262,6 +264,36 @@ impl NodeDataTrait for MyNodeData {
 
         let mut responses = vec![];
 
+        match &mut self.template {
+            MyNodeTemplate::ComponentFn(mut func, _dtype) => {
+                let mut updated = false;
+                for val in ComponentFn::all() {
+                    updated |= ui
+                        .selectable_value(&mut func, val, val.to_string())
+                        .clicked();
+                }
+                if updated {
+                    responses.push(NodeResponse::User(MyResponse::SetComponentFn(
+                        node_id, func,
+                    )));
+                }
+            }
+            MyNodeTemplate::ComponentInfixOp(mut func, _dtype) => {
+                let mut updated = false;
+                for val in ComponentInfixOp::all() {
+                    updated |= ui
+                        .selectable_value(&mut func, val, val.to_string())
+                        .clicked();
+                }
+                if updated {
+                    responses.push(NodeResponse::User(MyResponse::SetComponentInfixOp(
+                        node_id, func,
+                    )));
+                }
+            }
+            _ => (),
+        }
+
         let is_active = user_state
             .active_node
             .map(|id| id == node_id)
@@ -367,6 +399,20 @@ impl eframe::App for NodeGraphExample {
                 match user_event {
                     MyResponse::SetActiveNode(node) => self.user_state.active_node = Some(node),
                     MyResponse::ClearActiveNode => self.user_state.active_node = None,
+                    MyResponse::SetComponentInfixOp(id, infix) => {
+                        match &mut self.state.graph[id].user_data.template {
+                            MyNodeTemplate::ComponentInfixOp(current_infix, _) => {
+                                *current_infix = infix
+                            }
+                            _ => panic!("Wrong message"),
+                        }
+                    }
+                    MyResponse::SetComponentFn(id, func) => {
+                        match &mut self.state.graph[id].user_data.template {
+                            MyNodeTemplate::ComponentFn(current_func, _) => *current_func = func,
+                            _ => panic!("Wrong message"),
+                        }
+                    }
                 }
             }
         }
