@@ -10,6 +10,7 @@ use crate::node_editor::*;
 #[derive(Default)]
 pub struct NodeGraphExample {
     widget: NodeGraphWidget,
+    widget2: NodeGraphWidget,
 }
 
 #[cfg(feature = "persistence")]
@@ -45,6 +46,9 @@ impl eframe::App for NodeGraphExample {
             egui::menu::bar(ui, |ui| {
                 egui::widgets::global_dark_light_mode_switch(ui);
             });
+        });
+        egui::SidePanel::left("yeahhhh").show(ctx, |ui| {
+            self.widget2.show(ui);
         });
         egui::CentralPanel::default().show(ctx, |ui| {
             self.widget.show(ui);

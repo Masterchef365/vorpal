@@ -10,7 +10,8 @@ crate-type = ["cdylib", "rlib"]
 
 [dependencies]
 eframe = "0.22"
-egui_node_graph = { git = "https://github.com/Masterchef365/egui_node_graph.git", branch = "node-zoom" }
+#egui_node_graph = { git = "https://github.com/Masterchef365/egui_node_graph.git", branch = "node-zoom" }
+egui_node_graph = { path = "../../egui_node_graph/egui_node_graph" }
 vorpal-core = { path = "../vorpal-core" }
 anyhow = "1.0"
 serde = { version = "1.0", optional = true }
