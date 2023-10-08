@@ -8,6 +8,8 @@ use eframe::egui::{self, ComboBox, DragValue, TextStyle};
 use egui_node_graph::*;
 use vorpal_core::*;
 
+const XYZW: [&str; 4] = ["x", "y", "z", "w"];
+
 // ========= First, define your user data types =============
 
 /// The NodeData holds a custom data struct inside each node. It's useful to
@@ -143,7 +145,9 @@ impl NodeTemplateTrait for MyNodeTemplate {
 
         match self {
             MyNodeTemplate::Make(dtype) => {
-                add_input(graph, "x", *dtype);
+                for part in XYZW.iter().take(dtype.lanes()) {
+                    add_input(graph, *part, DataType::Scalar);
+                }
                 add_output(graph, "out", *dtype);
             }
             MyNodeTemplate::ComponentFn(_func, dtype) => {
@@ -201,13 +205,12 @@ impl WidgetValueTrait for NodeGuiValue {
     ) -> Vec<MyResponse> {
         // This trait is used to tell the library which UI to display for the
         // inline parameter widgets.
-        let xyzw = ["x", "y", "z", "w"];
 
         ui.label(param_name);
 
         let mut input_vector = |vector: &mut [f32]| {
             ui.horizontal(|ui| {
-                for (num, name) in vector.iter_mut().zip(xyzw) {
+                for (num, name) in vector.iter_mut().zip(XYZW) {
                     ui.label(name);
                     ui.add(DragValue::new(num));
                 }
@@ -494,7 +497,10 @@ pub fn extract_node_recursive(
             ))
         }
         MyNodeTemplate::Make(dtype) => Rc::new(vorpal_core::Node::Make(
-            vec![get_input_node(graph, node_id, "x", cache)?],
+            XYZW.iter()
+                .take(dtype.lanes())
+                .map(|name| get_input_node(graph, node_id, name, cache))
+                .collect::<Result<_, _>>()?,
             dtype,
         )),
     })
