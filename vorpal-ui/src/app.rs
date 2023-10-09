@@ -12,7 +12,7 @@ use crate::node_editor::*;
 pub struct NodeGraphExample {
     nodes: NodeGraphWidget,
     image: ImageViewWidget,
-    data: Array3<f32>,
+    data: NdArray<f32>,
 }
 
 impl Default for NodeGraphExample {
@@ -20,7 +20,7 @@ impl Default for NodeGraphExample {
         Self {
             nodes: Default::default(),
             image: Default::default(),
-            data: Array3::zeros((100, 100, 3)),
+            data: NdArray::zeros(vec![100, 100, 3]),
         }
     }
 }
@@ -97,11 +97,13 @@ impl ImageViewWidget {
 }
 
 /// Converts an image of 0 - 1 flaots into egui image data
-pub fn array_to_imagedata(array: &ndarray::Array3<f32>) -> ImageData {
+pub fn array_to_imagedata(array: &ndarray::NdArray<f32>) -> ImageData {
+    assert_eq!(array.shape().len(), 3, "Array must have shape [width, height, 3]");
     assert_eq!(array.shape()[2], 3, "Image must be RGB");
     assert!(array.len() > 0);
     let dims = [array.shape()[0], array.shape()[1]];
     let rgb: Vec<u8> = array
+        .data()
         .iter()
         .map(|value| (value.clamp(0., 1.) * 255.0) as u8)
         .collect();

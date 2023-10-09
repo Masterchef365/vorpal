@@ -1,6 +1,8 @@
-use std::rc::Rc;
+use std::{collections::HashMap, rc::Rc};
 
-pub use ndarray;
+use ndarray::NdArray;
+
+pub mod ndarray;
 
 type Scalar = f32;
 type Vec2 = [f32; 2];
@@ -44,8 +46,18 @@ pub enum ComponentFn {
     NaturalExp,
 }
 
+/// Unique name of external value input
+#[derive(Clone, Debug, PartialEq, Eq, Hash)]
+pub struct ExternInputId(String);
+
+/// Unique name of external sampler input
+#[derive(Clone, Debug, PartialEq, Eq, Hash)]
+pub struct ExternSamplerId(String);
+
 #[derive(Clone, Debug)]
 pub enum Node {
+    ExternInput(ExternInputId),
+    ExternSampler(ExternSamplerId),
     Constant(Value),
     Make(Vec<Rc<Node>>, DataType),
     ComponentInfixOp(Rc<Node>, ComponentInfixOp, Rc<Node>),
@@ -53,9 +65,24 @@ pub enum Node {
     GetComponent(Rc<Node>, Rc<Node>),
 }
 
-pub fn evaluate_node(node: &Node) -> Result<Value, EvalError> {
-    fn comp_infix<const N: usize>(mut a: [f32; N], infix: ComponentInfixOp, b: [f32; N]) -> [f32; N] {
-        a.iter_mut().zip(&b).for_each(|(a, b)| *a = infix.native(*a, *b));
+/// Sampler(A, B, C), samples ndarray A with a coordinate of vector B and returns vector C
+pub struct Sampler(NdArray<f32>, DataType, DataType);
+
+#[derive(Default)]
+pub struct ExternContext {
+    pub inputs: HashMap<ExternInputId, Value>,
+    pub samplers: HashMap<ExternSamplerId, Sampler>,
+}
+
+pub fn evaluate_node(node: &Node, ctx: &ExternContext) -> Result<Value, EvalError> {
+    fn comp_infix<const N: usize>(
+        mut a: [f32; N],
+        infix: ComponentInfixOp,
+        b: [f32; N],
+    ) -> [f32; N] {
+        a.iter_mut()
+            .zip(&b)
+            .for_each(|(a, b)| *a = infix.native(*a, *b));
         a
     }
 
@@ -69,7 +96,7 @@ pub fn evaluate_node(node: &Node) -> Result<Value, EvalError> {
             let mut val = Value::default_of_dtype(*dtype);
             let fill = |arr: &mut [f32]| {
                 for (node, out) in nodes.iter().zip(arr) {
-                    let part = evaluate_node(node)?;
+                    let part = evaluate_node(node, ctx)?;
                     *out = part.try_into()?;
                 }
                 Ok(())
@@ -88,25 +115,25 @@ pub fn evaluate_node(node: &Node) -> Result<Value, EvalError> {
         }
         Node::Constant(value) => Ok(value.clone()),
         Node::ComponentInfixOp(a, op, b) => {
-            match (evaluate_node(a)?, evaluate_node(b)?) {
-                (Value::Scalar(a), Value::Scalar(b)) => Ok(Value::Scalar(comp_infix([a], *op, [b])[0])),
+            match (evaluate_node(a, ctx)?, evaluate_node(b, ctx)?) {
+                (Value::Scalar(a), Value::Scalar(b)) => {
+                    Ok(Value::Scalar(comp_infix([a], *op, [b])[0]))
+                }
                 (Value::Vec2(a), Value::Vec2(b)) => Ok(Value::Vec2(comp_infix(a, *op, b))),
                 (Value::Vec3(a), Value::Vec3(b)) => Ok(Value::Vec3(comp_infix(a, *op, b))),
                 (Value::Vec4(a), Value::Vec4(b)) => Ok(Value::Vec4(comp_infix(a, *op, b))),
                 _ => Err(EvalError::TypeMismatch),
             }
         }
-        Node::ComponentFn(func, a) => {
-            match evaluate_node(a)? {
-                Value::Scalar(a) => Ok(Value::Scalar(comp_func([a], *func)[0])),
-                Value::Vec2(a) => Ok(Value::Vec2(comp_func(a, *func))),
-                Value::Vec3(a) => Ok(Value::Vec3(comp_func(a, *func))),
-                Value::Vec4(a) => Ok(Value::Vec4(comp_func(a, *func))),
-            }
-        }
+        Node::ComponentFn(func, a) => match evaluate_node(a, ctx)? {
+            Value::Scalar(a) => Ok(Value::Scalar(comp_func([a], *func)[0])),
+            Value::Vec2(a) => Ok(Value::Vec2(comp_func(a, *func))),
+            Value::Vec3(a) => Ok(Value::Vec3(comp_func(a, *func))),
+            Value::Vec4(a) => Ok(Value::Vec4(comp_func(a, *func))),
+        },
         Node::GetComponent(value, index) => {
-            let value = evaluate_node(value)?;
-            if let Value::Scalar(index) = evaluate_node(index)? {
+            let value = evaluate_node(value, ctx)?;
+            if let Value::Scalar(index) = evaluate_node(index, ctx)? {
                 let index = index.clamp(0., value.dtype().lanes() as f32);
                 let index = (index as usize).clamp(0, value.dtype().lanes() - 1);
                 Ok(Value::Scalar(match value {
@@ -119,12 +146,19 @@ pub fn evaluate_node(node: &Node) -> Result<Value, EvalError> {
                 Err(EvalError::TypeMismatch)
             }
         }
+        Node::ExternInput(id) => ctx
+            .inputs
+            .get(id)
+            .copied()
+            .ok_or_else(|| EvalError::BadInputId(id.clone())),
+        _ => todo!(),
     }
 }
 
-#[derive(Copy, Clone, Debug)]
+#[derive(Clone, Debug)]
 pub enum EvalError {
     TypeMismatch,
+    BadInputId(ExternInputId),
 }
 
 impl std::error::Error for EvalError {}
@@ -133,6 +167,7 @@ impl std::fmt::Display for EvalError {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
             EvalError::TypeMismatch => write!(f, "Type mismatch"),
+            EvalError::BadInputId(id) => write!(f, "Bad input id: {:?}", id),
         }
     }
 }
@@ -279,5 +314,50 @@ impl DataType {
             Self::Vec3 => 3,
             Self::Vec4 => 4,
         }
+    }
+}
+
+/*
+impl Sampler {
+    pub fn sample(&self, coord: Value) -> Value {
+        let Self(array, input_dtype, output_dtype) = self;
+        assert_eq!(coord.dtype(), input_dtype);
+        let mut index_array = [0_usize; 8];
+        let mut index_array_ptr = 0;
+
+        match coord {
+            Value::Scalar(scalar) => {
+                index_array[]
+            }
+        }
+
+        //index_array[index_array_ptr] =
+    }
+}
+*/
+
+impl std::fmt::Display for ExternInputId {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        let Self(name) = self;
+        name.fmt(f)
+    }
+}
+
+impl std::fmt::Display for ExternSamplerId {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        let Self(name) = self;
+        name.fmt(f)
+    }
+}
+
+impl ExternInputId {
+    pub fn new(name: String) -> Self {
+        Self(name)
+    }
+}
+
+impl ExternSamplerId {
+    pub fn new(name: String) -> Self {
+        Self(name)
     }
 }

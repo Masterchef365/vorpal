@@ -6,14 +6,14 @@ use std::{
 
 const XYZW: [&str; 4] = ["x", "y", "z", "w"];
 
-use eframe::egui::{self, ComboBox, DragValue, Ui, TextStyle};
+use eframe::egui::{self, ComboBox, DragValue, TextStyle, Ui};
 use egui_node_graph::*;
 use vorpal_core::*;
 
-#[derive(Default)]
 pub struct NodeGraphWidget {
     // The `GraphEditorState` is the top-level object. You "register" all your
     // custom types by specifying it as its generic parameters.
+    context: ExternContext,
     state: MyEditorState,
     user_state: MyGraphState,
 }
@@ -36,9 +36,10 @@ pub struct NodeGuiValue(pub Value);
 /// NodeTemplate is a mechanism to define node templates. It's what the graph
 /// will display in the "new node" popup. The user code needs to tell the
 /// library how to convert a NodeTemplate into a Node.
-#[derive(Clone, Copy)]
+#[derive(Clone)]
 #[cfg_attr(feature = "persistence", derive(serde::Serialize, serde::Deserialize))]
 pub enum MyNodeTemplate {
+    Input(ExternInputId, DataType),
     Make(DataType),
     ComponentInfixOp(ComponentInfixOp, DataType),
     ComponentFn(ComponentFn, DataType),
@@ -104,6 +105,7 @@ impl NodeTemplateTrait for MyNodeTemplate {
             Self::ComponentInfixOp(_infix, dtype) => format!("Operator ({dtype})"),
             Self::ComponentFn(_func, dtype) => format!("Function ({dtype})"),
             Self::GetComponent(dtype) => format!("Get component ({dtype})"),
+            Self::Input(name, dtype) => format!("Input {name} ({dtype})"),
         })
     }
 
@@ -114,6 +116,7 @@ impl NodeTemplateTrait for MyNodeTemplate {
             | MyNodeTemplate::ComponentInfixOp(_, dtype)
             | MyNodeTemplate::ComponentFn(_, dtype)
             | MyNodeTemplate::GetComponent(dtype) => vec![dtype.dtype_name()],
+            MyNodeTemplate::Input(_name, dtype) => vec!["Input", dtype.dtype_name()],
         }
     }
 
@@ -124,7 +127,9 @@ impl NodeTemplateTrait for MyNodeTemplate {
     }
 
     fn user_data(&self, _user_state: &mut Self::UserState) -> Self::NodeData {
-        MyNodeData { template: *self }
+        MyNodeData {
+            template: self.clone(),
+        }
     }
 
     fn build_node(
@@ -175,12 +180,18 @@ impl NodeTemplateTrait for MyNodeTemplate {
                 add_input(graph, "y", *dtype);
                 add_output(graph, "out", *dtype);
             }
+            MyNodeTemplate::Input(_name, dtype) => {
+                add_output(graph, "out", *dtype);
+            }
         }
     }
 }
 
-pub struct AllMyNodeTemplates;
-impl NodeTemplateIter for AllMyNodeTemplates {
+pub struct AllMyNodeTemplates<'ctx> {
+    ctx: &'ctx ExternContext,
+}
+
+impl NodeTemplateIter for AllMyNodeTemplates<'_> {
     type Item = MyNodeTemplate;
 
     fn all_kinds(&self) -> Vec<Self::Item> {
@@ -196,6 +207,10 @@ impl NodeTemplateIter for AllMyNodeTemplates {
             ));
             types.push(MyNodeTemplate::GetComponent(dtype));
             types.push(MyNodeTemplate::ComponentFn(ComponentFn::NaturalLog, dtype));
+        }
+
+        for (id, value) in &self.ctx.inputs {
+            types.push(MyNodeTemplate::Input(id.clone(), value.dtype()));
         }
 
         types
@@ -382,9 +397,9 @@ fn extract_node_recursive(
         return Ok(cached.clone());
     }
 
-    Ok(match node.user_data.template {
+    Ok(match &node.user_data.template {
         MyNodeTemplate::ComponentFn(func, _dtype) => Rc::new(vorpal_core::Node::ComponentFn(
-            func,
+            *func,
             get_input_node(graph, node_id, "x", cache)?,
         )),
         MyNodeTemplate::GetComponent(_dtype) => Rc::new(vorpal_core::Node::GetComponent(
@@ -394,7 +409,7 @@ fn extract_node_recursive(
         MyNodeTemplate::ComponentInfixOp(op, _dtype) => {
             Rc::new(vorpal_core::Node::ComponentInfixOp(
                 get_input_node(graph, node_id, "x", cache)?,
-                op,
+                *op,
                 get_input_node(graph, node_id, "y", cache)?,
             ))
         }
@@ -403,18 +418,26 @@ fn extract_node_recursive(
                 .take(dtype.lanes())
                 .map(|name| get_input_node(graph, node_id, name, cache))
                 .collect::<Result<_, _>>()?,
-            dtype,
+            *dtype,
         )),
+        MyNodeTemplate::Input(name, _dtype) => {
+            Rc::new(vorpal_core::Node::ExternInput(name.clone()))
+        }
     })
 }
 
 type OutputsCache = HashMap<OutputId, Rc<vorpal_core::Node>>;
 
 /// Recursively evaluates all dependencies of this node, then evaluates the node itself.
-pub fn evaluate_graph_node(graph: &MyGraph, node_id: NodeId) -> anyhow::Result<NodeGuiValue> {
-    Ok(NodeGuiValue(vorpal_core::evaluate_node(&*extract_node(
-        graph, node_id,
-    )?)?))
+pub fn evaluate_graph_node(
+    graph: &MyGraph,
+    node_id: NodeId,
+    context: &ExternContext,
+) -> anyhow::Result<NodeGuiValue> {
+    Ok(NodeGuiValue(vorpal_core::evaluate_node(
+        &*extract_node(graph, node_id)?,
+        context,
+    )?))
 }
 
 fn get_input_node(
@@ -451,7 +474,7 @@ impl NodeGraphWidget {
         let before: HashSet<InputId> = self.state.graph.connections.keys().collect();
         let resp = self.state.draw_graph_editor(
             ui,
-            AllMyNodeTemplates,
+            AllMyNodeTemplates { ctx: &self.context },
             &mut self.user_state,
             Vec::default(),
         );
@@ -495,7 +518,7 @@ impl NodeGraphWidget {
                     format!("Cycle detected")
                 } else {
                     let extracted = extract_node(&self.state.graph, node).unwrap();
-                    match evaluate_graph_node(&self.state.graph, node) {
+                    match evaluate_graph_node(&self.state.graph, node, &self.context) {
                         Ok(NodeGuiValue(value)) => {
                             format!("The result is: {:?}\n{:#?}", value, extracted)
                         }
@@ -515,12 +538,27 @@ impl NodeGraphWidget {
             }
         }
     }
-
 }
 
 fn undo_if_cycle(input_id: InputId, graph: &mut MyGraph) {
     let node_id = graph.get_input(input_id).node;
     if detect_cycle(graph, node_id) {
         graph.remove_connection(input_id);
+    }
+}
+
+impl Default for NodeGraphWidget {
+    fn default() -> Self {
+        let mut context = ExternContext::default();
+        context.inputs.insert(
+            ExternInputId::new("Time (Seconds)".into()),
+            Value::Scalar(std::f32::consts::PI),
+        );
+
+        Self {
+            context,
+            state: Default::default(),
+            user_state: Default::default(),
+        }
     }
 }
