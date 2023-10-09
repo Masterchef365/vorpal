@@ -141,7 +141,6 @@ impl NodeTemplateTrait for MyNodeTemplate {
         _user_state: &mut Self::UserState,
         node_id: NodeId,
     ) {
-        dbg!(node_id);
         // The nodes are created empty by default. This function needs to take
         // care of creating the desired inputs and outputs based on the template
 

@@ -78,8 +78,16 @@ impl eframe::App for NodeGraphExample {
     fn update(&mut self, ctx: &egui::Context, _frame: &mut eframe::Frame) {
         ctx.request_repaint();
 
-        for i in 0..self.data.shape()[0] {
-            for j in 0..self.data.shape()[1] {
+        let width = self.data.shape()[0];
+        let height = self.data.shape()[1];
+
+        self.nodes.context_mut().insert_input(
+            &ExternInputId::new(RESOLUTION_KEY.into()),
+            Value::Vec2([width as f32, height as f32]),
+        );
+
+        for i in 0..width {
+            for j in 0..height {
                 self.nodes.context_mut().insert_input(
                     &ExternInputId::new(POS_KEY.into()),
                     Value::Vec2([i as f32, j as f32]),
