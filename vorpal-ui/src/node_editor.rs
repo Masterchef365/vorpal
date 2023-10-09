@@ -10,7 +10,6 @@ use eframe::egui::{self, ComboBox, DragValue, TextStyle, Ui};
 use egui_node_graph::*;
 use vorpal_core::*;
 
-#[derive(Default)]
 pub struct NodeGraphWidget {
     // The `GraphEditorState` is the top-level object. You "register" all your
     // custom types by specifying it as its generic parameters.
@@ -45,6 +44,7 @@ pub enum MyNodeTemplate {
     ComponentInfixOp(ComponentInfixOp, DataType),
     ComponentFn(ComponentFn, DataType),
     GetComponent(DataType),
+    Output(DataType),
 }
 
 /// The response type is used to encode side-effects produced when drawing a
@@ -107,6 +107,7 @@ impl NodeTemplateTrait for MyNodeTemplate {
             Self::ComponentFn(_func, dtype) => format!("Function ({dtype})"),
             Self::GetComponent(dtype) => format!("Get component ({dtype})"),
             Self::Input(name, dtype) => format!("Input {name} ({dtype})"),
+            Self::Output(dtype) => format!("Output ({dtype})"),
         })
     }
 
@@ -118,6 +119,7 @@ impl NodeTemplateTrait for MyNodeTemplate {
             | MyNodeTemplate::ComponentFn(_, dtype)
             | MyNodeTemplate::GetComponent(dtype) => vec![dtype.dtype_name()],
             MyNodeTemplate::Input(_name, dtype) => vec!["Input", dtype.dtype_name()],
+            MyNodeTemplate::Output(_) => vec![],
         }
     }
 
@@ -183,6 +185,9 @@ impl NodeTemplateTrait for MyNodeTemplate {
             }
             MyNodeTemplate::Input(_name, dtype) => {
                 add_output(graph, "out", *dtype);
+            }
+            MyNodeTemplate::Output(dtype) => {
+                add_input(graph, "x", *dtype);
             }
         }
     }
@@ -392,10 +397,11 @@ fn extract_node_recursive(
 ) -> anyhow::Result<Rc<vorpal_core::Node>> {
     let node = &graph[node_id];
 
-    let output_id = node.get_output("out")?;
-
-    if let Some(cached) = cache.get(&output_id) {
-        return Ok(cached.clone());
+    if node.outputs(graph).next().is_some() {
+        let output_id = node.get_output("out")?;
+        if let Some(cached) = cache.get(&output_id) {
+            return Ok(cached.clone());
+        }
     }
 
     Ok(match &node.user_data.template {
@@ -424,6 +430,7 @@ fn extract_node_recursive(
         MyNodeTemplate::Input(name, _dtype) => {
             Rc::new(vorpal_core::Node::ExternInput(name.clone()))
         }
+        MyNodeTemplate::Output(_dtype) => get_input_node(graph, node_id, "x", cache)?,
     })
 }
 
@@ -549,5 +556,29 @@ fn undo_if_cycle(input_id: InputId, graph: &mut MyGraph) {
     let node_id = graph.get_input(input_id).node;
     if detect_cycle(graph, node_id) {
         graph.remove_connection(input_id);
+    }
+}
+
+impl Default for NodeGraphWidget {
+    fn default() -> Self {
+        let mut state: MyEditorState = MyEditorState::default();
+        let mut user_state: MyGraphState = Default::default();
+
+        let output = MyNodeTemplate::Output(DataType::Vec4);
+
+        let template = output.clone();
+        let id = state
+            .graph
+            .add_node("Output".into(), MyNodeData { template }, |_, _| ());
+
+        state.node_positions.insert(id, egui::Pos2::ZERO);
+        state.node_order.push(id);
+        MyNodeTemplate::Output(DataType::Vec4).build_node(&mut state.graph, &mut user_state, id);
+
+        Self {
+            context: Default::default(),
+            state,
+            user_state,
+        }
     }
 }
