@@ -10,6 +10,7 @@ use eframe::egui::{self, ComboBox, DragValue, TextStyle, Ui};
 use egui_node_graph::*;
 use vorpal_core::*;
 
+#[derive(Default)]
 pub struct NodeGraphWidget {
     // The `GraphEditorState` is the top-level object. You "register" all your
     // custom types by specifying it as its generic parameters.
@@ -209,7 +210,7 @@ impl NodeTemplateIter for AllMyNodeTemplates<'_> {
             types.push(MyNodeTemplate::ComponentFn(ComponentFn::NaturalLog, dtype));
         }
 
-        for (id, value) in &self.ctx.inputs {
+        for (id, value) in self.ctx.inputs() {
             types.push(MyNodeTemplate::Input(id.clone(), value.dtype()));
         }
 
@@ -470,6 +471,10 @@ impl Default for NodeGuiValue {
 }
 
 impl NodeGraphWidget {
+    pub fn context_mut(&mut self) -> &mut ExternContext {
+        &mut self.context
+    }
+
     pub fn show(&mut self, ui: &mut Ui) {
         let before: HashSet<InputId> = self.state.graph.connections.keys().collect();
         let resp = self.state.draw_graph_editor(
@@ -544,21 +549,5 @@ fn undo_if_cycle(input_id: InputId, graph: &mut MyGraph) {
     let node_id = graph.get_input(input_id).node;
     if detect_cycle(graph, node_id) {
         graph.remove_connection(input_id);
-    }
-}
-
-impl Default for NodeGraphWidget {
-    fn default() -> Self {
-        let mut context = ExternContext::default();
-        context.inputs.insert(
-            ExternInputId::new("Time (Seconds)".into()),
-            Value::Scalar(std::f32::consts::PI),
-        );
-
-        Self {
-            context,
-            state: Default::default(),
-            user_state: Default::default(),
-        }
     }
 }

@@ -1,9 +1,11 @@
+use std::time::Instant;
+
 use eframe::{
     egui::{self, TextureOptions, Ui},
     epaint::{ColorImage, ImageData, ImageDelta, TextureId, Vec2},
 };
 use ndarray::*;
-use vorpal_core::ndarray;
+use vorpal_core::{ndarray, ExternInputId, Value};
 
 use crate::node_editor::*;
 
@@ -13,12 +15,22 @@ pub struct NodeGraphExample {
     nodes: NodeGraphWidget,
     image: ImageViewWidget,
     data: NdArray<f32>,
+    time: Instant,
 }
+
+const TIME_KEY: &str = "Time (seconds)";
 
 impl Default for NodeGraphExample {
     fn default() -> Self {
+        let mut nodes = NodeGraphWidget::default();
+        nodes.context_mut().insert_input(
+            &ExternInputId::new(TIME_KEY.to_string()),
+            Value::Scalar(0.1),
+        );
+
         Self {
-            nodes: Default::default(),
+            time: Instant::now(),
+            nodes,
             image: Default::default(),
             data: NdArray::zeros(vec![100, 100, 3]),
         }
@@ -54,8 +66,15 @@ impl eframe::App for NodeGraphExample {
     /// Called each time the UI needs repainting, which may be many times per second.
     /// Put your widgets into a `SidePanel`, `TopPanel`, `CentralPanel`, `Window` or `Area`.
     fn update(&mut self, ctx: &egui::Context, _frame: &mut eframe::Frame) {
+        ctx.request_repaint();
+
         self.image
             .set_image("my image".into(), ctx, array_to_imagedata(&self.data));
+
+        self.nodes.context_mut().insert_input(
+            &ExternInputId::new(TIME_KEY.to_string()),
+            Value::Scalar(self.time.elapsed().as_secs_f32()),
+        );
 
         egui::TopBottomPanel::top("top").show(ctx, |ui| {
             egui::menu::bar(ui, |ui| {
@@ -98,7 +117,11 @@ impl ImageViewWidget {
 
 /// Converts an image of 0 - 1 flaots into egui image data
 pub fn array_to_imagedata(array: &ndarray::NdArray<f32>) -> ImageData {
-    assert_eq!(array.shape().len(), 3, "Array must have shape [width, height, 3]");
+    assert_eq!(
+        array.shape().len(),
+        3,
+        "Array must have shape [width, height, 3]"
+    );
     assert_eq!(array.shape()[2], 3, "Image must be RGB");
     assert!(array.len() > 0);
     let dims = [array.shape()[0], array.shape()[1]];

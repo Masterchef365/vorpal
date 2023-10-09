@@ -70,8 +70,8 @@ pub struct Sampler(NdArray<f32>, DataType, DataType);
 
 #[derive(Default)]
 pub struct ExternContext {
-    pub inputs: HashMap<ExternInputId, Value>,
-    pub samplers: HashMap<ExternSamplerId, Sampler>,
+    inputs: HashMap<ExternInputId, Value>,
+    samplers: HashMap<ExternSamplerId, Sampler>,
 }
 
 pub fn evaluate_node(node: &Node, ctx: &ExternContext) -> Result<Value, EvalError> {
@@ -359,5 +359,37 @@ impl ExternInputId {
 impl ExternSamplerId {
     pub fn new(name: String) -> Self {
         Self(name)
+    }
+}
+
+impl ExternContext {
+    pub fn new(
+        inputs: HashMap<ExternInputId, Value>,
+        samplers: HashMap<ExternSamplerId, Sampler>,
+    ) -> Self {
+        Self { inputs, samplers }
+    }
+
+    pub fn inputs(&self) -> &HashMap<ExternInputId, Value> {
+        &self.inputs
+    }
+
+    pub fn samplers(&self) -> &HashMap<ExternSamplerId, Sampler> {
+        &self.samplers
+    }
+
+    pub fn insert_input(&mut self, id: &ExternInputId, value: Value) {
+        if let Some(inner_val) = self.inputs.get(id) {
+            assert_eq!(inner_val.dtype(), value.dtype());
+        }
+        self.inputs.insert(id.clone(), value);
+    }
+
+    pub fn set_sampler(&mut self, _id: &ExternSamplerId, _value: Sampler) {
+        /*Sampler(array, )
+        //assert_eq!(self.inputs[id].dtype(), value.dtype());
+        self.inputs.insert(id.clone(), value);
+        */
+        todo!()
     }
 }
