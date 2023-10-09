@@ -9,10 +9,20 @@ use crate::node_editor::*;
 
 // ========= First, define your user data types =============
 
-#[derive(Default)]
 pub struct NodeGraphExample {
     nodes: NodeGraphWidget,
     image: ImageViewWidget,
+    data: Array3<f32>,
+}
+
+impl Default for NodeGraphExample {
+    fn default() -> Self {
+        Self {
+            nodes: Default::default(),
+            image: Default::default(),
+            data: Array3::zeros((100, 100, 3)),
+        }
+    }
 }
 
 #[cfg(feature = "persistence")]
@@ -44,24 +54,8 @@ impl eframe::App for NodeGraphExample {
     /// Called each time the UI needs repainting, which may be many times per second.
     /// Put your widgets into a `SidePanel`, `TopPanel`, `CentralPanel`, `Window` or `Area`.
     fn update(&mut self, ctx: &egui::Context, _frame: &mut eframe::Frame) {
-        let width = 100;
-        let height = 100;
-        let mut arr: Array3<f32> = Array3::zeros((width, height, 3));
-        for i in 0..width {
-            for j in 0..height {
-                let radius = width as i32 / 2;
-                let u = i as i32 - radius;
-                let v = j as i32 - radius;
-                if u.pow(2) + v.pow(2) < radius.pow(2) {
-                    for comp in 0..3 {
-                        arr[(i, j, comp)] = 1.;
-                    }
-                }
-            }
-        }
-
         self.image
-            .set_image("my image".into(), ctx, array_to_imagedata(&arr));
+            .set_image("my image".into(), ctx, array_to_imagedata(&self.data));
 
         egui::TopBottomPanel::top("top").show(ctx, |ui| {
             egui::menu::bar(ui, |ui| {
