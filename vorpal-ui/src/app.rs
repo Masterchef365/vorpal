@@ -19,6 +19,8 @@ pub struct NodeGraphExample {
 }
 
 const TIME_KEY: &str = "Time (seconds)";
+const POS_KEY: &str = "Position (pixels)";
+const RESOLUTION_KEY: &str = "Resolution (pixels)";
 
 impl Default for NodeGraphExample {
     fn default() -> Self {
@@ -26,6 +28,14 @@ impl Default for NodeGraphExample {
         nodes.context_mut().insert_input(
             &ExternInputId::new(TIME_KEY.to_string()),
             Value::Scalar(0.1),
+        );
+        nodes.context_mut().insert_input(
+            &ExternInputId::new(POS_KEY.to_string()),
+            Value::Vec2([0.; 2]),
+        );
+        nodes.context_mut().insert_input(
+            &ExternInputId::new(RESOLUTION_KEY.to_string()),
+            Value::Vec2([1.; 2]),
         );
 
         Self {
@@ -67,6 +77,23 @@ impl eframe::App for NodeGraphExample {
     /// Put your widgets into a `SidePanel`, `TopPanel`, `CentralPanel`, `Window` or `Area`.
     fn update(&mut self, ctx: &egui::Context, _frame: &mut eframe::Frame) {
         ctx.request_repaint();
+
+        for i in 0..self.data.shape()[0] {
+            for j in 0..self.data.shape()[1] {
+                self.nodes.context_mut().insert_input(
+                    &ExternInputId::new(POS_KEY.into()),
+                    Value::Vec2([i as f32, j as f32]),
+                );
+
+                let Ok(Value::Vec4(result)) = self.nodes.eval_output_node() else {
+                    panic!("Failed to eval node");
+                };
+
+                for k in 0..self.data.shape()[2] {
+                    self.data[[i, j, k]] = result[k];
+                }
+            }
+        }
 
         self.image
             .set_image("my image".into(), ctx, array_to_imagedata(&self.data));

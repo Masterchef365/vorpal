@@ -33,7 +33,7 @@ impl<T> NdArray<T> {
         let mut stride = 1;
         // Note: Index is iterated over in reverse order so that adding 1 to the last index coord
         // adds 1 to the array index
-        for (extent, dim_size) in index_nd.iter().rev().zip(&self.dims) {
+        for (extent, dim_size) in index_nd.iter().zip(&self.dims).rev() {
             if extent > dim_size {
                 return None;
             }
