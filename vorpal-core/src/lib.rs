@@ -1,5 +1,7 @@
 use std::rc::Rc;
 
+pub use ndarray;
+
 type Scalar = f32;
 type Vec2 = [f32; 2];
 type Vec3 = [f32; 3];
