@@ -45,6 +45,7 @@ pub enum MyNodeTemplate {
     ComponentFn(ComponentFn, DataType),
     GetComponent(DataType),
     Output(DataType),
+    Dot(DataType),
 }
 
 /// The response type is used to encode side-effects produced when drawing a
@@ -108,6 +109,7 @@ impl NodeTemplateTrait for MyNodeTemplate {
             Self::GetComponent(dtype) => format!("Get component ({dtype})"),
             Self::Input(name, dtype) => format!("Input {name} ({dtype})"),
             Self::Output(dtype) => format!("Output ({dtype})"),
+            Self::Dot(dtype) => format!("Dot ({dtype})"),
         })
     }
 
@@ -117,7 +119,8 @@ impl NodeTemplateTrait for MyNodeTemplate {
             MyNodeTemplate::Make(dtype)
             | MyNodeTemplate::ComponentInfixOp(_, dtype)
             | MyNodeTemplate::ComponentFn(_, dtype)
-            | MyNodeTemplate::GetComponent(dtype) => vec![dtype.dtype_name()],
+            | MyNodeTemplate::GetComponent(dtype)
+            | MyNodeTemplate::Dot(dtype) => vec![dtype.dtype_name()],
             MyNodeTemplate::Input(_name, dtype) => vec!["Input", dtype.dtype_name()],
             MyNodeTemplate::Output(_) => vec![],
         }
@@ -188,6 +191,11 @@ impl NodeTemplateTrait for MyNodeTemplate {
             MyNodeTemplate::Output(dtype) => {
                 add_input(graph, "x", *dtype);
             }
+            MyNodeTemplate::Dot(dtype) => {
+                add_input(graph, "x", *dtype);
+                add_input(graph, "y", *dtype);
+                add_output(graph, "out", DataType::Scalar);
+            }
         }
     }
 }
@@ -212,6 +220,7 @@ impl NodeTemplateIter for AllMyNodeTemplates<'_> {
             ));
             types.push(MyNodeTemplate::GetComponent(dtype));
             types.push(MyNodeTemplate::ComponentFn(ComponentFn::NaturalLog, dtype));
+            types.push(MyNodeTemplate::Dot(dtype));
         }
 
         for (id, value) in self.ctx.inputs() {
@@ -430,6 +439,12 @@ fn extract_node_recursive(
             Rc::new(vorpal_core::Node::ExternInput(name.clone()))
         }
         MyNodeTemplate::Output(_dtype) => get_input_node(graph, node_id, "x", cache)?,
+        MyNodeTemplate::Dot(_dtype) => {
+            Rc::new(vorpal_core::Node::Dot(
+                get_input_node(graph, node_id, "x", cache)?,
+                get_input_node(graph, node_id, "y", cache)?,
+            ))
+        }
     })
 }
 

@@ -34,6 +34,8 @@ pub enum ComponentInfixOp {
     Divide,
     Power,
     Logbase,
+    GreaterThan,
+    LessThan,
 }
 
 /// Function on components
@@ -44,6 +46,9 @@ pub enum ComponentFn {
     Tangent,
     NaturalLog,
     NaturalExp,
+    Ceil,
+    Floor,
+    Abs,
 }
 
 /// Unique name of external value input
@@ -63,6 +68,7 @@ pub enum Node {
     ComponentInfixOp(Rc<Node>, ComponentInfixOp, Rc<Node>),
     ComponentFn(ComponentFn, Rc<Node>),
     GetComponent(Rc<Node>, Rc<Node>),
+    Dot(Rc<Node>, Rc<Node>),
 }
 
 /// Sampler(A, B, C), samples ndarray A with a coordinate of vector B and returns vector C
@@ -89,6 +95,10 @@ pub fn evaluate_node(node: &Node, ctx: &ExternContext) -> Result<Value, EvalErro
     fn comp_func<const N: usize>(mut x: [f32; N], func: ComponentFn) -> [f32; N] {
         x.iter_mut().for_each(|x| *x = func.native(*x));
         x
+    }
+
+    fn dot(a: &[f32], b: &[f32]) -> f32 {
+        a.iter().zip(b).map(|(a, b)| a * b).sum()
     }
 
     match node {
@@ -151,6 +161,13 @@ pub fn evaluate_node(node: &Node, ctx: &ExternContext) -> Result<Value, EvalErro
             .get(id)
             .copied()
             .ok_or_else(|| EvalError::BadInputId(id.clone())),
+        Node::Dot(a, b) => match (evaluate_node(a, ctx)?, evaluate_node(b, ctx)?) {
+            (Value::Scalar(a), Value::Scalar(b)) => Ok(Value::Scalar(a * b)),
+            (Value::Vec2(a), Value::Vec2(b)) => Ok(Value::Scalar(dot(&a, &b))),
+            (Value::Vec3(a), Value::Vec3(b)) => Ok(Value::Scalar(dot(&a, &b))),
+            (Value::Vec4(a), Value::Vec4(b)) => Ok(Value::Scalar(dot(&a, &b))),
+            _ => Err(EvalError::TypeMismatch),
+        },
         _ => todo!(),
     }
 }
@@ -198,6 +215,8 @@ impl std::fmt::Display for ComponentInfixOp {
             Self::Subtract => "subtract",
             Self::Power => "power",
             Self::Logbase => "logbase",
+            Self::GreaterThan => "greater than",
+            Self::LessThan => "less than",
         };
         write!(f, "{}", name)
     }
@@ -211,6 +230,9 @@ impl std::fmt::Display for ComponentFn {
             Self::Tangent => "tangent",
             Self::NaturalLog => "natural log",
             Self::NaturalExp => "exponential",
+            Self::Abs => "absolute value",
+            Self::Ceil => "ceiling",
+            Self::Floor => "floor",
         };
         write!(f, "{}", name)
     }
@@ -257,13 +279,16 @@ impl_value_try_into!(Vec3, Vec3);
 impl_value_try_into!(Vec4, Vec4);
 
 impl ComponentFn {
-    pub fn all() -> [Self; 5] {
+    pub fn all() -> [Self; 8] {
         [
             Self::Cosine,
             Self::Sine,
             Self::Tangent,
             Self::NaturalLog,
             Self::NaturalExp,
+            Self::Ceil,
+            Self::Floor,
+            Self::Abs,
         ]
     }
 
@@ -274,12 +299,15 @@ impl ComponentFn {
             Self::Tangent => x.tan(),
             Self::NaturalLog => x.ln(),
             Self::NaturalExp => x.exp(),
+            Self::Ceil => x.ceil(),
+            Self::Floor => x.floor(),
+            Self::Abs => x.abs(),
         }
     }
 }
 
 impl ComponentInfixOp {
-    pub fn all() -> [Self; 6] {
+    pub fn all() -> [Self; 8] {
         [
             Self::Add,
             Self::Subtract,
@@ -287,6 +315,8 @@ impl ComponentInfixOp {
             Self::Divide,
             Self::Power,
             Self::Logbase,
+            Self::GreaterThan,
+            Self::LessThan,
         ]
     }
 
@@ -298,6 +328,8 @@ impl ComponentInfixOp {
             Self::Divide => a / b,
             Self::Power => a.powf(b),
             Self::Logbase => a.log(b),
+            Self::GreaterThan => f32::from(a > b),
+            Self::LessThan => f32::from(a < b),
         }
     }
 }
