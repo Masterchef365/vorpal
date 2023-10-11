@@ -456,7 +456,7 @@ pub fn evaluate_graph_node(
     node_id: NodeId,
     context: &ExternContext,
 ) -> anyhow::Result<NodeGuiValue> {
-    Ok(NodeGuiValue(vorpal_core::evaluate_node(
+    Ok(NodeGuiValue(crate::node_editor::native_backend::evaluate_node(
         &*extract_node(graph, node_id)?,
         context,
     )?))
