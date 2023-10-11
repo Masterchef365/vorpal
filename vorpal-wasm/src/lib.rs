@@ -34,5 +34,7 @@ impl Engine {
     }
 }
 
-fn compile_to_wat() -> String {
+/// Compile a node into its equivalent
+pub fn compile_to_wat(node: &Node) -> String {
+    todo!()
 }
