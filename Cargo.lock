@@ -970,6 +970,7 @@ dependencies = [
 [[package]]
 name = "egui_node_graph"
 version = "0.4.0"
+source = "git+https://github.com/Masterchef365/egui_node_graph.git?branch=unique_slotmaps#4166ac864081c0c511af70a4f4267372ea507f04"
 dependencies = [
  "egui",
  "getrandom",
