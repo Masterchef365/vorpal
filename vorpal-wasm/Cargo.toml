@@ -7,3 +7,6 @@ edition = "2021"
 
 [dependencies]
 wasm-bridge = { git = "https://github.com/kajacx/wasm-bridge.git", branch = "master" }
+vorpal-core = { path = "../vorpal-core" }
+wabt = "0.10.0"
+anyhow = "1"
