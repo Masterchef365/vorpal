@@ -3,4 +3,5 @@ resolver = "2"
 members = [
     "vorpal-core",
     "vorpal-ui",
+    "vorpal-wasm",
 ]
