@@ -4,4 +4,5 @@ members = [
     "vorpal-core",
     "vorpal-ui",
     "vorpal-wasm",
+    "vorpal-wasm-builtins",
 ]
