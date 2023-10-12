@@ -1,6 +1,9 @@
-use vorpal_core::{ExternContext, Value};
+use vorpal_core::{ExternContext, Value, ExternInputId};
 use vorpal_wasm::evaluate_node;
 
 fn main() {
-    dbg!(evaluate_node(&vorpal_core::Node::Constant(Value::Scalar(5.0)), &ExternContext::default()));
+    //let node = vorpal_core::Node::Constant(Value::Scalar(5.0));
+    let node = vorpal_core::Node::ExternInput(ExternInputId::new("Test".into()));
+
+    dbg!(evaluate_node(&node, &ExternContext::default())).unwrap();
 }

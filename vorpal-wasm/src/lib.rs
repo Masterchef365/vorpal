@@ -71,7 +71,9 @@ impl CodeGenerator {
     }
 
     pub fn compile_to_wat(&mut self, node: &Node) -> Result<String> {
-        self.find_inputs_and_locals(Rc::new(node.clone()));
+        self.find_inputs_and_locals_recursive(Rc::new(node.clone()));
+        dbg!(&self.inputs);
+        dbg!(&self.explored.len());
 
         let param_list_text = "f32 f32";
         let result_list_text = "f32 f32";
@@ -95,33 +97,34 @@ impl CodeGenerator {
 )"#
         );
 
-        println!("{}", module_text);
+        //println!("{}", module_text);
 
         Ok(module_text)
     }
 
-    fn find_inputs_and_locals(&mut self, node: Rc<Node>) {
+    fn find_inputs_and_locals_recursive(&mut self, node: Rc<Node>) {
         if !self.explored.insert(HashRcByPtr(node.clone())) {
             return;
         }
 
         match &*node {
-            Node::Dot(a, b) | Node::ComponentInfixOp(a, _, b) | Node::GetComponent(a, b) => {
-                self.find_inputs_and_locals(a.clone());
-                self.find_inputs_and_locals(b.clone());
-            }
             Node::ExternInput(name) => {
                 let id = self.gen_var_id();
                 self.inputs.insert(name.clone(), id);
                 self.locals.insert(HashRcByPtr(node.clone()), id);
             }
+            // Depth-first search
+            Node::Dot(a, b) | Node::ComponentInfixOp(a, _, b) | Node::GetComponent(a, b) => {
+                self.find_inputs_and_locals_recursive(a.clone());
+                self.find_inputs_and_locals_recursive(b.clone());
+            }
             Node::ExternSampler(_) => todo!(),
             Node::Constant(_) => (),
             Node::Make(sub_nodes, _) => for sub_node in sub_nodes {
-                self.find_inputs_and_locals(sub_node.clone());
+                self.find_inputs_and_locals_recursive(sub_node.clone());
             }
             Node::ComponentFn(_, a) => {
-                self.find_inputs_and_locals(a.clone());
+                self.find_inputs_and_locals_recursive(a.clone());
             }
         }
     }
