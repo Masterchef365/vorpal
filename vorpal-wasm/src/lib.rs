@@ -1,6 +1,7 @@
 use anyhow::Result;
 use vorpal_core::*;
 use wasm_bridge::*;
+use std::fmt::Write;
 
 pub fn evaluate_node(node: &Node, ctx: &ExternContext) -> Result<Value> {
     Engine::new()?.eval(&node, ctx)
@@ -18,7 +19,7 @@ impl Engine {
     }
 
     pub fn eval(&mut self, node: &Node, ctx: &ExternContext) -> Result<Value> {
-        let mut codegen = CodeGenerator::new(ctx.inputs().keys().cloned().collect());
+        let mut codegen = CodeGenerator::new(ctx.inputs().iter().map(|(k, v)| (k.clone(), v.dtype())).collect());
 
         let wat = codegen.compile_to_wat(node)?;
         let module = Module::new(&self.wasm_engine, wat)?;
@@ -50,17 +51,18 @@ type LocalVarId = u32;
 #[derive(Default)]
 struct CodeGenerator {
     locals: HashMap<HashRcByPtr<Node>, (LocalVarId, DataType)>,
-    inputs: HashMap<ExternInputId, LocalVarId>,
+    inputs: HashMap<ExternInputId, (LocalVarId, DataType)>,
     next_var_id: LocalVarId,
+    func_input_list: Vec<ExternInputId>,
 }
 
 impl CodeGenerator {
-    pub fn new(input_names: Vec<ExternInputId>) -> Self {
+    pub fn new(input_names: Vec<(ExternInputId, DataType)>) -> Self {
         // Parameter list
         let mut inputs = HashMap::new();
         let mut next_var_id = 0;
-        for name in input_names {
-            inputs.insert(name, next_var_id);
+        for (name, dtype) in input_names {
+            inputs.insert(name, (next_var_id, dtype));
             next_var_id += 1;
         }
 
@@ -68,14 +70,31 @@ impl CodeGenerator {
             next_var_id,
             inputs,
             locals: Default::default(),
+            func_input_list: vec![],
         }
     }
 
     pub fn compile_to_wat(&mut self, node: &Node) -> Result<String> {
-        self.find_inputs_and_locals_recursive(Rc::new(node.clone()));
+        // Find input and output dtypes
+        let final_output_dtype = self.find_inputs_and_locals_recursive(Rc::new(node.clone()));
 
-        let param_list_text = "f32 f32";
-        let result_list_text = "f32 f32";
+        // Build parameter list
+        let mut param_list_text = String::new();
+        for (name, (var_id, dtype)) in &self.inputs {
+            for lane in "xyzw".chars().take(dtype.lanes()) {
+                write!(&mut param_list_text, "(param ${var_id}_{lane} f32) ").unwrap();
+            }
+            self.func_input_list.push(name.clone());
+        }
+
+        // Build result list
+        let mut result_list_text = "(result ".to_string();
+        for _ in 0..final_output_dtype.lanes() {
+            result_list_text += "f32 ";
+        }
+        result_list_text += ")";
+
+
         let function_body_text = "
     local.get 0
     local.get 1
@@ -87,7 +106,7 @@ impl CodeGenerator {
 
         let module_text = format!(
             r#"(module
-  (func $kernel (param {param_list_text}) (result {result_list_text})
+  (func $kernel {param_list_text} {result_list_text}
 {function_body_text}
   )
   (export "kernel" (func $kernel))
@@ -96,7 +115,7 @@ impl CodeGenerator {
 )"#
         );
 
-        //println!("{}", module_text);
+        println!("{}", module_text);
 
         Ok(module_text)
     }
