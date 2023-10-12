@@ -1,7 +1,7 @@
 use anyhow::Result;
+use std::fmt::Write;
 use vorpal_core::*;
 use wasm_bridge::*;
-use std::fmt::Write;
 
 pub fn evaluate_node(node: &Node, ctx: &ExternContext) -> Result<Value> {
     Engine::new()?.eval(&node, ctx)
@@ -19,14 +19,19 @@ impl Engine {
     }
 
     pub fn eval(&mut self, node: &Node, ctx: &ExternContext) -> Result<Value> {
-        let mut codegen = CodeGenerator::new(ctx.inputs().iter().map(|(k, v)| (k.clone(), v.dtype())).collect());
+        let mut codegen = CodeGenerator::new(
+            ctx.inputs()
+                .iter()
+                .map(|(k, v)| (k.clone(), v.dtype()))
+                .collect(),
+        );
 
-        let wat = codegen.compile_to_wat(node)?;
+        let (wat, final_output_dtype) = codegen.compile_to_wat(node)?;
         let module = Module::new(&self.wasm_engine, wat)?;
         let mut store = Store::new(&self.wasm_engine, ());
         let instance = Instance::new(&mut store, &module, &[])?;
 
-        self.exec_instance(&codegen, &instance, &mut store, ctx)
+        self.exec_instance(&codegen, &instance, &mut store, ctx, final_output_dtype)
     }
 
     fn exec_instance(
@@ -35,12 +40,62 @@ impl Engine {
         instance: &Instance,
         mut store: &mut Store<()>,
         ctx: &ExternContext,
+        final_output_dtype: DataType,
     ) -> Result<Value> {
-        let kernel = instance.get_typed_func::<(f32, f32), (f32, f32)>(&mut store, "kernel")?;
-        //instance.get_func(&mut store, "kernel").unwrap();
-        Ok(Value::Vec2(Vec2::from(
-            kernel.call(&mut store, (2.5, 5.0))?,
-        )))
+        let kernel = instance
+            .get_func(&mut store, "kernel")
+            .ok_or_else(|| anyhow::format_err!("Kernel function not found"))?;
+
+        // Create parameter list
+        let mut params = vec![];
+        for name in codegen.func_input_list.iter() {
+            let input_val = ctx.inputs()[name];
+            assert_eq!(codegen.inputs[name].1, input_val.dtype());
+            match input_val {
+                Value::Scalar(a) => params.push(Val::F32(a.to_bits())),
+                Value::Vec2(v) => params.extend(v.map(|x| Val::F32(x.to_bits()))),
+                Value::Vec3(v) => params.extend(v.map(|x| Val::F32(x.to_bits()))),
+                Value::Vec4(v) => params.extend(v.map(|x| Val::F32(x.to_bits()))),
+            }
+        }
+
+        // Create output list
+        let mut results = vec![];
+        match final_output_dtype {
+            DataType::Scalar => results.push(Val::F32(0_f32.to_bits())),
+            DataType::Vec2 => results.extend(vec![Val::F32(0_f32.to_bits()); 2]),
+            DataType::Vec3 => results.extend(vec![Val::F32(0_f32.to_bits()); 3]),
+            DataType::Vec4 => results.extend(vec![Val::F32(0_f32.to_bits()); 4]),
+        }
+
+        // Call the function
+        kernel.call(&mut store, &params, &mut results)?;
+
+        // Unwind the results
+        Ok(match final_output_dtype {
+            DataType::Scalar => Value::Scalar(results[0].f32().unwrap()),
+            DataType::Vec2 => {
+                let mut val = [0.; 2];
+                val.iter_mut()
+                    .zip(&results)
+                    .for_each(|(v, res)| *v = res.f32().unwrap());
+                Value::Vec2(val)
+            }
+            DataType::Vec3 => {
+                let mut val = [0.; 3];
+                val.iter_mut()
+                    .zip(&results)
+                    .for_each(|(v, res)| *v = res.f32().unwrap());
+                Value::Vec3(val)
+            }
+            DataType::Vec4 => {
+                let mut val = [0.; 4];
+                val.iter_mut()
+                    .zip(&results)
+                    .for_each(|(v, res)| *v = res.f32().unwrap());
+                Value::Vec4(val)
+            }
+        })
     }
 }
 
@@ -74,7 +129,7 @@ impl CodeGenerator {
         }
     }
 
-    pub fn compile_to_wat(&mut self, node: &Node) -> Result<String> {
+    pub fn compile_to_wat(&mut self, node: &Node) -> Result<(String, DataType)> {
         // Find input and output dtypes
         let final_output_dtype = self.find_inputs_and_locals_recursive(Rc::new(node.clone()));
 
@@ -93,7 +148,6 @@ impl CodeGenerator {
             result_list_text += "f32 ";
         }
         result_list_text += ")";
-
 
         let function_body_text = "
     local.get 0
@@ -117,7 +171,7 @@ impl CodeGenerator {
 
         println!("{}", module_text);
 
-        Ok(module_text)
+        Ok((module_text, final_output_dtype))
     }
 
     fn find_inputs_and_locals_recursive(&mut self, node: Rc<Node>) -> DataType {
