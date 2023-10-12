@@ -68,7 +68,7 @@ pub struct ExternSamplerId(String);
 
 #[derive(Clone, Debug)]
 pub enum Node {
-    ExternInput(ExternInputId),
+    ExternInput(ExternInputId, DataType),
     ExternSampler(ExternSamplerId),
     Constant(Value),
     Make(Vec<Rc<Node>>, DataType),

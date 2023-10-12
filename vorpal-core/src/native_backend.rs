@@ -76,7 +76,8 @@ pub fn evaluate_node(node: &Node, ctx: &ExternContext) -> Result<Value, EvalErro
                 Err(EvalError::TypeMismatch)
             }
         }
-        Node::ExternInput(id) => ctx
+        // TODO: Typecheck dtype here!
+        Node::ExternInput(id, _dtype) => ctx
             .inputs
             .get(id)
             .copied()

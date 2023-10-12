@@ -36,6 +36,7 @@ impl Engine {
         ctx: &ExternContext,
     ) -> Result<Value> {
         let kernel = instance.get_typed_func::<(f32, f32), (f32, f32)>(&mut store, "kernel")?;
+        //instance.get_func(&mut store, "kernel").unwrap();
         Ok(Value::Vec2(Vec2::from(
             kernel.call(&mut store, (2.5, 5.0))?,
         )))
@@ -48,15 +49,14 @@ type LocalVarId = u32;
 /// Compile a node into its equivalent
 #[derive(Default)]
 struct CodeGenerator {
-    locals: HashMap<HashRcByPtr<Node>, LocalVarId>,
+    locals: HashMap<HashRcByPtr<Node>, (LocalVarId, DataType)>,
     inputs: HashMap<ExternInputId, LocalVarId>,
-    explored: HashSet<HashRcByPtr<Node>>,
     next_var_id: LocalVarId,
 }
 
 impl CodeGenerator {
     pub fn new(input_names: Vec<ExternInputId>) -> Self {
-        // Parameter list 
+        // Parameter list
         let mut inputs = HashMap::new();
         let mut next_var_id = 0;
         for name in input_names {
@@ -66,14 +66,13 @@ impl CodeGenerator {
 
         Self {
             next_var_id,
-            ..Default::default()
+            inputs,
+            locals: Default::default(),
         }
     }
 
     pub fn compile_to_wat(&mut self, node: &Node) -> Result<String> {
         self.find_inputs_and_locals_recursive(Rc::new(node.clone()));
-        dbg!(&self.inputs);
-        dbg!(&self.explored.len());
 
         let param_list_text = "f32 f32";
         let result_list_text = "f32 f32";
@@ -102,31 +101,54 @@ impl CodeGenerator {
         Ok(module_text)
     }
 
-    fn find_inputs_and_locals_recursive(&mut self, node: Rc<Node>) {
-        if !self.explored.insert(HashRcByPtr(node.clone())) {
-            return;
+    fn find_inputs_and_locals_recursive(&mut self, node: Rc<Node>) -> DataType {
+        let node_hash = HashRcByPtr(node.clone());
+        if let Some((_number, dtype)) = self.locals.get(&node_hash) {
+            return *dtype;
         }
 
-        match &*node {
-            Node::ExternInput(name) => {
-                let id = self.gen_var_id();
-                self.inputs.insert(name.clone(), id);
-                self.locals.insert(HashRcByPtr(node.clone()), id);
+        let dtype: DataType = match &*node {
+            Node::ExternInput(name, dtype) => {
+                assert!(self.inputs.contains_key(&name));
+                *dtype
             }
             // Depth-first search
-            Node::Dot(a, b) | Node::ComponentInfixOp(a, _, b) | Node::GetComponent(a, b) => {
-                self.find_inputs_and_locals_recursive(a.clone());
-                self.find_inputs_and_locals_recursive(b.clone());
+            Node::ComponentInfixOp(a, _, b) => {
+                let a = self.find_inputs_and_locals_recursive(a.clone());
+                let b = self.find_inputs_and_locals_recursive(b.clone());
+                assert_eq!(a, b);
+                a
+            }
+            Node::Dot(a, b) | Node::GetComponent(a, b) => {
+                let a = self.find_inputs_and_locals_recursive(a.clone());
+                let b = self.find_inputs_and_locals_recursive(b.clone());
+                assert_eq!(a, b);
+                DataType::Scalar
             }
             Node::ExternSampler(_) => todo!(),
-            Node::Constant(_) => (),
-            Node::Make(sub_nodes, _) => for sub_node in sub_nodes {
-                self.find_inputs_and_locals_recursive(sub_node.clone());
+            Node::Constant(val) => val.dtype(),
+            Node::Make(sub_nodes, _) => {
+                for sub_node in sub_nodes {
+                    assert_eq!(
+                        self.find_inputs_and_locals_recursive(sub_node.clone()),
+                        DataType::Scalar
+                    );
+                }
+                match sub_nodes.len() {
+                    1 => DataType::Scalar,
+                    2 => DataType::Vec2,
+                    3 => DataType::Vec3,
+                    4 => DataType::Vec4,
+                    other => panic!("Attempted to make an vector type; {}", other),
+                }
             }
-            Node::ComponentFn(_, a) => {
-                self.find_inputs_and_locals_recursive(a.clone());
-            }
-        }
+            Node::ComponentFn(_, a) => self.find_inputs_and_locals_recursive(a.clone()),
+        };
+
+        let new_id = self.gen_var_id();
+        self.locals.insert(node_hash, (new_id, dtype));
+
+        dtype
     }
 
     fn gen_var_id(&mut self) -> LocalVarId {
