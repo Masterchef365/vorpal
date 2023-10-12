@@ -19,12 +19,7 @@ impl Engine {
     }
 
     pub fn eval(&mut self, node: &Node, ctx: &ExternContext) -> Result<Value> {
-        let mut codegen = CodeGenerator::new(
-            ctx.inputs()
-                .iter()
-                .map(|(k, v)| (k.clone(), v.dtype()))
-                .collect(),
-        );
+        let mut codegen = CodeGenerator::new();
 
         let (wat, final_output_dtype) = codegen.compile_to_wat(node)?;
         let module = Module::new(&self.wasm_engine, wat)?;
@@ -112,18 +107,10 @@ struct CodeGenerator {
 }
 
 impl CodeGenerator {
-    pub fn new(input_names: Vec<(ExternInputId, DataType)>) -> Self {
-        // Parameter list
-        let mut inputs = HashMap::new();
-        let mut next_var_id = 0;
-        for (name, dtype) in input_names {
-            inputs.insert(name, (next_var_id, dtype));
-            next_var_id += 1;
-        }
-
+    pub fn new() -> Self {
         Self {
-            next_var_id,
-            inputs,
+            next_var_id: 0,
+            inputs: Default::default(),
             locals: Default::default(),
             func_input_list: vec![],
         }
@@ -202,9 +189,11 @@ impl CodeGenerator {
             return *dtype;
         }
 
+        let new_id = self.gen_var_id();
+
         let dtype: DataType = match &*node {
             Node::ExternInput(name, dtype) => {
-                assert!(self.inputs.contains_key(&name));
+                self.inputs.insert(name.clone(), (new_id, *dtype));
                 *dtype
             }
             // Depth-first search
@@ -240,7 +229,6 @@ impl CodeGenerator {
             Node::ComponentFn(_, a) => self.find_inputs_and_locals_recursive(a.clone()),
         };
 
-        let new_id = self.gen_var_id();
         self.locals.insert(node_hash, (new_id, dtype));
 
         dtype
@@ -263,9 +251,19 @@ impl CodeGenerator {
         }
 
         match &*node.0 {
+            // Don't need to do anything, input is already provided for us
+            Node::ExternInput(_, _) => (),
             Node::ComponentInfixOp(a, infix, b) => {
                 assert_eq!(infix, &ComponentInfixOp::Add);
-                //let a = self.locals[
+                let (a_id, _) = self.locals[&HashRcByPtr(a.clone())];
+                let (b_id, _) = self.locals[&HashRcByPtr(b.clone())];
+                let (out_var_id, out_dtype) = self.locals[node];
+                for lane in out_dtype.lane_names() {
+                    writeln!(text, "local.get ${a_id}_{lane}").unwrap();
+                    writeln!(text, "local.get ${b_id}_{lane}").unwrap();
+                    writeln!(text, "f32.add").unwrap();
+                    writeln!(text, "local.set ${out_var_id}_{lane}").unwrap();
+                }
             }
             _ => todo!(),
         }

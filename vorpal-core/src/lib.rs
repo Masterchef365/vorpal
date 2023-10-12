@@ -96,6 +96,10 @@ impl DataType {
             Self::Vec4 => "Vec4",
         }
     }
+
+    pub fn lane_names(&self) -> impl Iterator<Item=char> {
+        "xyzw".chars().take(self.lanes())
+    }
 }
 
 impl std::fmt::Display for DataType {
