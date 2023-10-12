@@ -130,15 +130,19 @@ impl CodeGenerator {
     }
 
     pub fn compile_to_wat(&mut self, node: &Node) -> Result<(String, DataType)> {
+        let node = Rc::new(node.clone());
+
         // Find input and output dtypes
-        let final_output_dtype = self.find_inputs_and_locals_recursive(Rc::new(node.clone()));
+        let final_output_dtype = self.find_inputs_and_locals_recursive(node.clone());
 
         // Build parameter list
+        let mut input_var_ids = HashSet::new();
         let mut param_list_text = String::new();
         for (name, (var_id, dtype)) in &self.inputs {
             for lane in "xyzw".chars().take(dtype.lanes()) {
                 write!(&mut param_list_text, "(param ${var_id}_{lane} f32) ").unwrap();
             }
+            input_var_ids.insert(var_id);
             self.func_input_list.push(name.clone());
         }
 
@@ -149,6 +153,21 @@ impl CodeGenerator {
         }
         result_list_text += ")";
 
+        // Build local list
+        let mut function_body_text = String::new();
+        for (_node, (var_id, dtype)) in &self.locals {
+            // Ignore inputs, which are already locals!
+            if input_var_ids.contains(&var_id) {
+                continue;
+            }
+
+            for lane in "xyzw".chars().take(dtype.lanes()) {
+                writeln!(&mut function_body_text, "(local ${var_id}_{lane} f32) ").unwrap();
+            }
+        }
+
+
+        /*
         let function_body_text = "
     local.get 0
     local.get 1
@@ -157,6 +176,9 @@ impl CodeGenerator {
     local.get 1
     f32.add
     ";
+        */
+
+        self.compile_to_wat_recursive(&HashRcByPtr(node), &mut function_body_text, &mut HashSet::new());
 
         let module_text = format!(
             r#"(module
@@ -230,8 +252,23 @@ impl CodeGenerator {
         ret
     }
 
-    fn compile_to_wat_recursive(&mut self, node: &Node) -> Result<String> {
-        todo!()
+    fn compile_to_wat_recursive(
+        &self,
+        node: &HashRcByPtr<Node>,
+        text: &mut String,
+        visited: &mut HashSet<HashRcByPtr<Node>>,
+    ) {
+        if !visited.insert(node.clone()) {
+            return;
+        }
+
+        match &*node.0 {
+            Node::ComponentInfixOp(a, infix, b) => {
+                assert_eq!(infix, &ComponentInfixOp::Add);
+                //let a = self.locals[
+            }
+            _ => todo!(),
+        }
     }
 }
 
