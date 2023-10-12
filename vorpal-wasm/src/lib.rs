@@ -3,7 +3,7 @@ use vorpal_core::*;
 use wasm_bridge::*;
 
 pub fn evaluate_node(node: &Node, ctx: &ExternContext) -> Result<Value> {
-    Engine::new()?.eval(&node, ctx.inputs())
+    Engine::new()?.eval(&node, ctx)
 }
 
 pub struct Engine {
@@ -17,17 +17,28 @@ impl Engine {
         })
     }
 
-    pub fn eval(&mut self, node: &Node, inputs: &HashMap<ExternInputId, Value>) -> Result<Value> {
-        let input_names = inputs.keys().cloned().collect::<Vec<_>>();
-        let mut codegen = CodeGenerator::new(input_names);
+    pub fn eval(&mut self, node: &Node, ctx: &ExternContext) -> Result<Value> {
+        let mut codegen = CodeGenerator::new(ctx.inputs().keys().cloned().collect());
 
         let wat = codegen.compile_to_wat(node)?;
         let module = Module::new(&self.wasm_engine, wat)?;
         let mut store = Store::new(&self.wasm_engine, ());
         let instance = Instance::new(&mut store, &module, &[])?;
 
+        self.exec_instance(&codegen, &instance, &mut store, ctx)
+    }
+
+    fn exec_instance(
+        &mut self,
+        codegen: &CodeGenerator,
+        instance: &Instance,
+        mut store: &mut Store<()>,
+        ctx: &ExternContext,
+    ) -> Result<Value> {
         let kernel = instance.get_typed_func::<(f32, f32), (f32, f32)>(&mut store, "kernel")?;
-        Ok(Value::Vec2(Vec2::from(kernel.call(&mut store, (2.5, 5.0))?)))
+        Ok(Value::Vec2(Vec2::from(
+            kernel.call(&mut store, (2.5, 5.0))?,
+        )))
     }
 }
 
@@ -37,19 +48,31 @@ type LocalVarId = u32;
 /// Compile a node into its equivalent
 #[derive(Default)]
 struct CodeGenerator {
-    params: HashMap<HashRcByPtr<Node>, LocalVarId>,
+    locals: HashMap<HashRcByPtr<Node>, LocalVarId>,
     inputs: HashMap<ExternInputId, LocalVarId>,
+    explored: HashSet<HashRcByPtr<Node>>,
+    next_var_id: LocalVarId,
 }
 
 impl CodeGenerator {
     pub fn new(input_names: Vec<ExternInputId>) -> Self {
-        let mut params = HashMap::new();
+        // Parameter list 
         let mut inputs = HashMap::new();
+        let mut next_var_id = 0;
+        for name in input_names {
+            inputs.insert(name, next_var_id);
+            next_var_id += 1;
+        }
 
-        Self { inputs, params }
+        Self {
+            next_var_id,
+            ..Default::default()
+        }
     }
 
     pub fn compile_to_wat(&mut self, node: &Node) -> Result<String> {
+        self.find_inputs_and_locals(Rc::new(node.clone()));
+
         let param_list_text = "f32 f32";
         let result_list_text = "f32 f32";
         let function_body_text = "
@@ -77,12 +100,44 @@ impl CodeGenerator {
         Ok(module_text)
     }
 
-    pub fn compile_to_wat_recursive(&mut self, node: &Node) -> Result<String> {
+    fn find_inputs_and_locals(&mut self, node: Rc<Node>) {
+        if !self.explored.insert(HashRcByPtr(node.clone())) {
+            return;
+        }
+
+        match &*node {
+            Node::Dot(a, b) | Node::ComponentInfixOp(a, _, b) | Node::GetComponent(a, b) => {
+                self.find_inputs_and_locals(a.clone());
+                self.find_inputs_and_locals(b.clone());
+            }
+            Node::ExternInput(name) => {
+                let id = self.gen_var_id();
+                self.inputs.insert(name.clone(), id);
+                self.locals.insert(HashRcByPtr(node.clone()), id);
+            }
+            Node::ExternSampler(_) => todo!(),
+            Node::Constant(_) => (),
+            Node::Make(sub_nodes, _) => for sub_node in sub_nodes {
+                self.find_inputs_and_locals(sub_node.clone());
+            }
+            Node::ComponentFn(_, a) => {
+                self.find_inputs_and_locals(a.clone());
+            }
+        }
+    }
+
+    fn gen_var_id(&mut self) -> LocalVarId {
+        let ret = self.next_var_id;
+        self.next_var_id += 1;
+        ret
+    }
+
+    fn compile_to_wat_recursive(&mut self, node: &Node) -> Result<String> {
         todo!()
     }
 }
 
-use std::collections::HashMap;
+use std::collections::{HashMap, HashSet};
 use std::hash::{Hash, Hasher};
 use std::rc::Rc;
 
