@@ -5,10 +5,10 @@ use ndarray::NdArray;
 pub mod ndarray;
 pub mod native_backend;
 
-type Scalar = f32;
-type Vec2 = [f32; 2];
-type Vec3 = [f32; 3];
-type Vec4 = [f32; 4];
+pub type Scalar = f32;
+pub type Vec2 = [f32; 2];
+pub type Vec3 = [f32; 3];
+pub type Vec4 = [f32; 4];
 
 #[derive(PartialEq, Eq, Clone, Copy, Debug)]
 pub enum DataType {
