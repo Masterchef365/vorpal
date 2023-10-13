@@ -46,22 +46,12 @@ impl Engine {
         for name in codegen.func_input_list.iter() {
             let input_val = ctx.inputs()[name];
             assert_eq!(codegen.inputs[name].1, input_val.dtype());
-            match input_val {
-                Value::Scalar(a) => params.push(Val::F32(a.to_bits())),
-                Value::Vec2(v) => params.extend(v.map(|x| Val::F32(x.to_bits()))),
-                Value::Vec3(v) => params.extend(v.map(|x| Val::F32(x.to_bits()))),
-                Value::Vec4(v) => params.extend(v.map(|x| Val::F32(x.to_bits()))),
-            }
+            params.extend(input_val.iter_vector_floats().map(|f| Val::F32(f.to_bits())));
         }
 
         // Create output list
         let mut results = vec![];
-        match final_output_dtype {
-            DataType::Scalar => results.push(Val::F32(0_f32.to_bits())),
-            DataType::Vec2 => results.extend(vec![Val::F32(0_f32.to_bits()); 2]),
-            DataType::Vec3 => results.extend(vec![Val::F32(0_f32.to_bits()); 3]),
-            DataType::Vec4 => results.extend(vec![Val::F32(0_f32.to_bits()); 4]),
-        }
+        params.extend((0..final_output_dtype.lanes()).map(|_| Val::F32(0_f32.to_bits())));
 
         // Call the function
         kernel.call(&mut store, &params, &mut results)?;
@@ -253,9 +243,23 @@ impl CodeGenerator {
             return;
         }
 
+        let (out_var_id, out_dtype) = self.locals[node];
+
         match &*node.0 {
             // Don't need to do anything, input is already provided for us
             Node::ExternInput(_, _) => (),
+            Node::Constant(value) => {
+                writeln!(
+                    text,
+                    ";; Constant ${out_var_id} = {value:?}",
+                )
+                .unwrap();
+
+                for (float, lane) in value.iter_vector_floats().zip(value.dtype().lane_names()) {
+                    writeln!(text, "f32.const {float}").unwrap();
+                    writeln!(text, "local.set ${out_var_id}_{lane}").unwrap();
+                }
+            },
             Node::ComponentInfixOp(a, infix, b) => {
                 // Visit child nodes first
                 let a = HashRcByPtr(a.clone());
@@ -266,7 +270,6 @@ impl CodeGenerator {
                 // Write comment
                 let (a_id, _) = self.locals[&a];
                 let (b_id, _) = self.locals[&b];
-                let (out_var_id, out_dtype) = self.locals[node];
                 writeln!(
                     text,
                     ";; Component infix op ${out_var_id} = ${a_id} {} ${b_id}",
@@ -290,8 +293,10 @@ impl CodeGenerator {
                     writeln!(text, "local.set ${out_var_id}_{lane}").unwrap();
                 }
             }
-            _ => todo!(),
+            _ => todo!("Node type {:?}", node.0)
         }
+
+        writeln!(text).unwrap();
     }
 }
 

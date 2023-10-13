@@ -2,8 +2,8 @@ use std::{collections::HashMap, rc::Rc};
 
 use ndarray::NdArray;
 
-pub mod ndarray;
 pub mod native_backend;
+pub mod ndarray;
 
 pub type Scalar = f32;
 pub type Vec2 = [f32; 2];
@@ -97,7 +97,7 @@ impl DataType {
         }
     }
 
-    pub fn lane_names(&self) -> impl Iterator<Item=char> {
+    pub fn lane_names(&self) -> impl Iterator<Item = char> {
         "xyzw".chars().take(self.lanes())
     }
 }
@@ -349,5 +349,21 @@ impl std::fmt::Display for EvalError {
             EvalError::TypeMismatch => write!(f, "Type mismatch"),
             EvalError::BadInputId(id) => write!(f, "Bad input id: {:?}", id),
         }
+    }
+}
+
+impl Value {
+    pub fn iter_vector_floats(self) -> impl Iterator<Item = f32> {
+        let mut i = 0;
+        std::iter::from_fn(move || {
+            let result = match self {
+                Self::Scalar(val) => (i == 0).then(|| val),
+                Self::Vec2(val) => val.get(i).copied(),
+                Self::Vec3(val) => val.get(i).copied(),
+                Self::Vec4(val) => val.get(i).copied(),
+            };
+            i += 1;
+            result
+        })
     }
 }
