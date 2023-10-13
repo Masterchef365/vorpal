@@ -435,8 +435,8 @@ fn extract_node_recursive(
                 .collect::<Result<_, _>>()?,
             *dtype,
         )),
-        MyNodeTemplate::Input(name, _dtype) => {
-            Rc::new(vorpal_core::Node::ExternInput(name.clone()))
+        MyNodeTemplate::Input(name, dtype) => {
+            Rc::new(vorpal_core::Node::ExternInput(name.clone(), *dtype))
         }
         MyNodeTemplate::Output(_dtype) => get_input_node(graph, node_id, "x", cache)?,
         MyNodeTemplate::Dot(_dtype) => {
