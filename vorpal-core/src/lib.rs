@@ -234,6 +234,19 @@ impl ComponentInfixOp {
             Self::LessThan => f32::from(a < b),
         }
     }
+
+    pub fn symbol(&self) -> char {
+        match self {
+            Self::Add => '+',
+            Self::Subtract => '-',
+            Self::Multiply => '*',
+            Self::Divide => '/',
+            Self::Power => '^',
+            Self::Logbase => 'L',
+            Self::GreaterThan => '>',
+            Self::LessThan => '<',
+        }
+    }
 }
 
 impl DataType {

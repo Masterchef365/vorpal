@@ -141,7 +141,7 @@ impl CodeGenerator {
         result_list_text += ")";
 
         // Build local list
-        let mut function_body_text = String::new();
+        let mut locals_text = String::new();
         for (_node, (var_id, dtype)) in &self.locals {
             // Ignore inputs, which are already locals!
             if input_var_ids.contains(&var_id) {
@@ -149,35 +149,31 @@ impl CodeGenerator {
             }
 
             for lane in "xyzw".chars().take(dtype.lanes()) {
-                writeln!(&mut function_body_text, "(local ${var_id}_{lane} f32) ").unwrap();
+                writeln!(&mut locals_text, "(local ${var_id}_{lane} f32) ").unwrap();
             }
         }
 
-
-        /*
-        let function_body_text = "
-    local.get 0
-    local.get 1
-    f32.sub
-    local.get 0
-    local.get 1
-    f32.add
-    ";
-        */
-
+        // Compile instructions
+        let mut function_body_text = String::new();
         let hash_node = HashRcByPtr(node.clone());
         self.compile_to_wat_recursive(&hash_node, &mut function_body_text, &mut HashSet::new());
 
         // Build output stack
+        let mut output_stack_text = String::new();
         let (var_id, _) = self.locals[&hash_node];
         for lane in final_output_dtype.lane_names() {
-            writeln!(&mut function_body_text, "local.get ${var_id}_{lane}").unwrap();
+            writeln!(&mut output_stack_text, "local.get ${var_id}_{lane}").unwrap();
         }
 
         let module_text = format!(
             r#"(module
   (func $kernel {param_list_text} {result_list_text}
+;; Local variables
+{locals_text}
+;; Compiled function
 {function_body_text}
+;; Output stacking
+{output_stack_text}
   )
   (export "kernel" (func $kernel))
   (memory (;0;) 16)
@@ -264,6 +260,12 @@ impl CodeGenerator {
                 let (a_id, _) = self.locals[&HashRcByPtr(a.clone())];
                 let (b_id, _) = self.locals[&HashRcByPtr(b.clone())];
                 let (out_var_id, out_dtype) = self.locals[node];
+                writeln!(
+                    text,
+                    ";; Component infix op ${out_var_id} = ${a_id} {} ${b_id}",
+                    infix.symbol()
+                )
+                .unwrap();
                 for lane in out_dtype.lane_names() {
                     writeln!(text, "local.get ${a_id}_{lane}").unwrap();
                     writeln!(text, "local.get ${b_id}_{lane}").unwrap();
