@@ -13,7 +13,7 @@ use vorpal_core::*;
 pub struct NodeGraphWidget {
     // The `GraphEditorState` is the top-level object. You "register" all your
     // custom types by specifying it as its generic parameters.
-    context: ExternContext,
+    pub context: ExternContext,
     state: MyEditorState,
     pub user_state: MyGraphState,
 }
@@ -67,7 +67,6 @@ pub enum MyResponse {
 #[cfg_attr(feature = "persistence", derive(serde::Serialize, serde::Deserialize))]
 pub struct MyGraphState {
     pub active_node: Option<NodeId>,
-    pub use_wasm: bool,
 }
 
 // =========== Then, you need to implement some traits ============
@@ -537,33 +536,24 @@ impl NodeGraphWidget {
             }
         }
 
+        
+    }
+
+    pub fn extract_active_node(&mut self) -> anyhow::Result<Option<Rc<vorpal_core::Node>>> {
         if let Some(node) = self.user_state.active_node {
             if self.state.graph.nodes.contains_key(node) {
-                let has_cycle = detect_cycle(&self.state.graph, node);
-
-                let text = if has_cycle {
-                    format!("Cycle detected")
+                if detect_cycle(&self.state.graph, node) {
+                    Err(anyhow::format_err!("Cycle detected"))
                 } else {
                     let extracted = extract_node(&self.state.graph, node).unwrap();
-
-                    match evaluate_graph_node(&self.state.graph, node, &self.context) {
-                        Ok(NodeGuiValue(value)) => {
-                            format!("The result is: {:?}\n{:#?}", value, extracted)
-                        }
-                        Err(err) => format!("Execution error: {}", err),
-                    }
-                };
-
-                ui.ctx().debug_painter().text(
-                    egui::pos2(10.0, 35.0),
-                    egui::Align2::LEFT_TOP,
-                    text,
-                    TextStyle::Button.resolve(&ui.ctx().style()),
-                    egui::Color32::WHITE,
-                );
+                    Ok(Some(extracted))
+                }
             } else {
                 self.user_state.active_node = None;
+                Ok(None)
             }
+        } else {
+            Ok(None)
         }
     }
 

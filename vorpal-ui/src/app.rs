@@ -1,7 +1,7 @@
 use std::time::Instant;
 
 use eframe::{
-    egui::{self, TextureOptions, Ui},
+    egui::{self, TextureOptions, Ui, TextStyle},
     epaint::{ColorImage, ImageData, ImageDelta, TextureId, Vec2},
 };
 use ndarray::*;
@@ -126,6 +126,31 @@ impl eframe::App for NodeGraphExample {
         });
         egui::SidePanel::right("options").show(ctx, |ui| {
             ui.checkbox(&mut self.use_wasm, "Use WASM for active node");
+            let maybe_node = self.nodes.extract_active_node();
+
+            let text = match maybe_node {
+                Ok(Some(node)) => {
+                    let result = match self.use_wasm {
+                        true => self.engine.eval(&node, &self.nodes.context),
+                        false => vorpal_core::native_backend::evaluate_node(&node, &self.nodes.context).map_err(|e| e.into()),
+                    };
+
+                    match result {
+                        Err(e) => format!("Error: {:?}", e),
+                        Ok(value) => format!("The result is: {:?}", value),
+                    }
+                }
+                Ok(None) => format!("No node selected"),
+                Err(err) => format!("Execution error: {}", err),
+            };
+
+            ui.ctx().debug_painter().text(
+                egui::pos2(10.0, 35.0),
+                egui::Align2::LEFT_TOP,
+                text,
+                TextStyle::Button.resolve(&ui.ctx().style()),
+                egui::Color32::WHITE,
+            );
         });
         egui::CentralPanel::default().show(ctx, |ui| {
             self.image.show(ui);
