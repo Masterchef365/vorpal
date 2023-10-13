@@ -261,14 +261,21 @@ impl CodeGenerator {
             // Don't need to do anything, input is already provided for us
             Node::ExternInput(_, _) => (),
             Node::ComponentInfixOp(a, infix, b) => {
-                assert_eq!(infix, &ComponentInfixOp::Add);
                 let (a_id, _) = self.locals[&HashRcByPtr(a.clone())];
                 let (b_id, _) = self.locals[&HashRcByPtr(b.clone())];
                 let (out_var_id, out_dtype) = self.locals[node];
                 for lane in out_dtype.lane_names() {
                     writeln!(text, "local.get ${a_id}_{lane}").unwrap();
                     writeln!(text, "local.get ${b_id}_{lane}").unwrap();
-                    writeln!(text, "f32.add").unwrap();
+                    let op_text = match infix {
+                        ComponentInfixOp::Add => "f32.add",
+                        ComponentInfixOp::Subtract => "f32.sub",
+                        ComponentInfixOp::Divide => "f32.div",
+                        ComponentInfixOp::Multiply => "f32.mul",
+                        _ => todo!("{}", infix),
+                    };
+
+                    writeln!(text, "{}", op_text).unwrap();
                     writeln!(text, "local.set ${out_var_id}_{lane}").unwrap();
                 }
             }
