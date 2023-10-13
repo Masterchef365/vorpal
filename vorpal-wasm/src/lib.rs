@@ -171,7 +171,7 @@ impl CodeGenerator {
         // Build output stack
         let (var_id, _) = self.locals[&hash_node];
         for lane in final_output_dtype.lane_names() {
-            writeln!(&mut function_body_text, "local.get {var_id}_{lane}").unwrap();
+            writeln!(&mut function_body_text, "local.get ${var_id}_{lane}").unwrap();
         }
 
         let module_text = format!(
