@@ -247,6 +247,24 @@ impl CodeGenerator {
 
         match &*node.0 {
             // Don't need to do anything, input is already provided for us
+            Node::Make(sub_nodes, dtype) => {
+                assert_eq!(dtype.lanes(), sub_nodes.len());
+
+                for sub_node in sub_nodes {
+                    let sub_node = HashRcByPtr(sub_node.clone());
+                    self.compile_to_wat_recursive(&sub_node, text, visited);
+                }
+
+                writeln!(text, ";; Make vector ${out_var_id}").unwrap();
+                for (lane, sub_node) in out_dtype.lane_names().zip(sub_nodes) {
+                    let sub_node = HashRcByPtr(sub_node.clone());
+                    let (a_id, dtype) = self.locals[&sub_node];
+                    assert_eq!(dtype, DataType::Scalar);
+                    writeln!(text, "local.get ${a_id}_x").unwrap();
+                    writeln!(text, "local.set ${out_var_id}_{lane}").unwrap();
+                }
+
+            }
             Node::ExternInput(_, _) => (),
             Node::Constant(value) => {
                 writeln!(

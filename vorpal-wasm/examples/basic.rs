@@ -1,6 +1,6 @@
 use std::rc::Rc;
 
-use vorpal_core::{ExternContext, Value, ExternInputId, DataType, ComponentInfixOp};
+use vorpal_core::{ComponentInfixOp, DataType, ExternContext, ExternInputId, Value};
 use vorpal_wasm::evaluate_node;
 
 fn main() {
@@ -9,9 +9,15 @@ fn main() {
     let mut ctx = ExternContext::default();
     ctx.insert_input(&test_input_name, Value::Vec2([420.0, 69.0]));
 
-    let a = Rc::new(vorpal_core::Node::ExternInput(test_input_name.clone(), DataType::Vec2));
-    let b = Rc::new(vorpal_core::Node::Constant(Value::Vec2([90.0, 10.0])));
-    let node = Rc::new(vorpal_core::Node::ComponentInfixOp(a, ComponentInfixOp::Subtract, b));
+    let node = Rc::new(vorpal_core::Node::Make(
+        vec![
+            Rc::new(vorpal_core::Node::Constant(Value::Scalar(1.0))),
+            Rc::new(vorpal_core::Node::Constant(Value::Scalar(1.0))),
+            Rc::new(vorpal_core::Node::Constant(Value::Scalar(1.0))),
+            Rc::new(vorpal_core::Node::Constant(Value::Scalar(1.0))),
+        ],
+        DataType::Vec4,
+    ));
 
     dbg!(evaluate_node(&node, &ctx)).unwrap();
 }
