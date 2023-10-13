@@ -337,6 +337,36 @@ impl CodeGenerator {
                     writeln!(text, "local.set ${out_var_id}_{lane}").unwrap();
                 }
             }
+            Node::Dot(a, b) => {
+                // Visit child nodes first
+                let a = HashRcByPtr(a.clone());
+                let b = HashRcByPtr(b.clone());
+                self.compile_to_wat_recursive(&a, text, visited);
+                self.compile_to_wat_recursive(&b, text, visited);
+
+                // Write comment
+                let (a_id, a_dtype) = self.locals[&a];
+                let (b_id, b_dtype) = self.locals[&b];
+
+                assert_eq!(a_dtype, b_dtype);
+
+                writeln!(
+                    text,
+                    ";; Dot product ${out_var_id} = ${a_id} * ${b_id}",
+                )
+                .unwrap();
+
+                // Write code
+                for (idx, lane) in a_dtype.lane_names().enumerate() {
+                    writeln!(text, "local.get ${a_id}_{lane}").unwrap();
+                    writeln!(text, "local.get ${b_id}_{lane}").unwrap();
+                    writeln!(text, "f32.mul").unwrap();
+                    if idx + 1 != out_dtype.lanes() {
+                        writeln!(text, "f32.add").unwrap();
+                    }
+                }
+                writeln!(text, "local.set ${out_var_id}_x").unwrap();
+            }
             _ => todo!("Node type {:?}", node.0)
         }
 
