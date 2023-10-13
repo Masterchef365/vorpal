@@ -197,9 +197,8 @@ impl CodeGenerator {
                 a
             }
             Node::Dot(a, b) | Node::GetComponent(a, b) => {
-                let a = self.find_inputs_and_locals_recursive(a.clone());
-                let b = self.find_inputs_and_locals_recursive(b.clone());
-                assert_eq!(a, b);
+                self.find_inputs_and_locals_recursive(a.clone());
+                self.find_inputs_and_locals_recursive(b.clone());
                 DataType::Scalar
             }
             Node::ExternSampler(_) => todo!(),
@@ -263,6 +262,32 @@ impl CodeGenerator {
                     writeln!(text, "local.get ${a_id}_x").unwrap();
                     writeln!(text, "local.set ${out_var_id}_{lane}").unwrap();
                 }
+
+            }
+            Node::GetComponent(vector_node, index_node) => {
+                for sub_node in [vector_node, index_node] {
+                    let sub_node = HashRcByPtr(sub_node.clone());
+                    self.compile_to_wat_recursive(&sub_node, text, visited);
+                }
+
+                let (vector_id, vector_dtype) = self.locals[&HashRcByPtr(vector_node.clone())];
+                let (index_id, index_dtype) = self.locals[&HashRcByPtr(index_node.clone())];
+                assert_eq!(index_dtype, DataType::Scalar);
+
+                writeln!(text, ";; Get component ${out_var_id} = ${vector_id}[${index_id}]").unwrap();
+                writeln!(text, "f32.const 0 ;; Default value").unwrap();
+                for (i, lane) in vector_dtype.lane_names().enumerate() {
+                    writeln!(text, "local.get ${vector_id}_{lane}").unwrap();
+                    // Check if the index equals this lane's index...
+                    writeln!(text, "local.get ${index_id}_x ;;").unwrap();
+                    writeln!(text, "f32.floor").unwrap();
+                    writeln!(text, "f32.const {}.0", i).unwrap();
+                    writeln!(text, "f32.eq").unwrap();
+                    // Then set the output to this value
+                    writeln!(text, "select").unwrap();
+                }
+
+                writeln!(text, "local.set ${out_var_id}_x").unwrap();
 
             }
             Node::ExternInput(_, _) => (),
