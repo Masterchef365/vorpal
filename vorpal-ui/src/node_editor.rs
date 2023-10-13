@@ -15,7 +15,7 @@ pub struct NodeGraphWidget {
     // custom types by specifying it as its generic parameters.
     context: ExternContext,
     state: MyEditorState,
-    user_state: MyGraphState,
+    pub user_state: MyGraphState,
 }
 
 pub type MyGraph = Graph<MyNodeData, DataType, NodeGuiValue>;
@@ -67,6 +67,7 @@ pub enum MyResponse {
 #[cfg_attr(feature = "persistence", derive(serde::Serialize, serde::Deserialize))]
 pub struct MyGraphState {
     pub active_node: Option<NodeId>,
+    pub use_wasm: bool,
 }
 
 // =========== Then, you need to implement some traits ============
@@ -544,6 +545,7 @@ impl NodeGraphWidget {
                     format!("Cycle detected")
                 } else {
                     let extracted = extract_node(&self.state.graph, node).unwrap();
+
                     match evaluate_graph_node(&self.state.graph, node, &self.context) {
                         Ok(NodeGuiValue(value)) => {
                             format!("The result is: {:?}\n{:#?}", value, extracted)

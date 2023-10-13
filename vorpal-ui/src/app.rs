@@ -16,6 +16,9 @@ pub struct NodeGraphExample {
     image: ImageViewWidget,
     data: NdArray<f32>,
     time: Instant,
+
+    use_wasm: bool,
+    engine: vorpal_wasm::Engine,
 }
 
 const TIME_KEY: &str = "Time (seconds)";
@@ -39,6 +42,8 @@ impl Default for NodeGraphExample {
         );
 
         Self {
+            engine: vorpal_wasm::Engine::new().unwrap(),
+            use_wasm: true,
             time: Instant::now(),
             nodes,
             image: Default::default(),
@@ -116,8 +121,11 @@ impl eframe::App for NodeGraphExample {
                 egui::widgets::global_dark_light_mode_switch(ui);
             });
         });
-        egui::SidePanel::left("yeahhhh").show(ctx, |ui| {
+        egui::SidePanel::left("nodes").show(ctx, |ui| {
             self.nodes.show(ui);
+        });
+        egui::SidePanel::right("options").show(ctx, |ui| {
+            ui.checkbox(&mut self.use_wasm, "Use WASM for active node");
         });
         egui::CentralPanel::default().show(ctx, |ui| {
             self.image.show(ui);

@@ -2725,6 +2725,7 @@ dependencies = [
  "egui_node_graph",
  "serde",
  "vorpal-core",
+ "vorpal-wasm",
 ]
 
 [[package]]
