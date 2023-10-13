@@ -165,7 +165,14 @@ impl CodeGenerator {
     ";
         */
 
-        self.compile_to_wat_recursive(&HashRcByPtr(node), &mut function_body_text, &mut HashSet::new());
+        let hash_node = HashRcByPtr(node.clone());
+        self.compile_to_wat_recursive(&hash_node, &mut function_body_text, &mut HashSet::new());
+
+        // Build output stack
+        let (var_id, _) = self.locals[&hash_node];
+        for lane in final_output_dtype.lane_names() {
+            writeln!(&mut function_body_text, "local.get {var_id}_{lane}").unwrap();
+        }
 
         let module_text = format!(
             r#"(module
