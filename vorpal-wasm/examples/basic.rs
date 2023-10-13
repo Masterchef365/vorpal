@@ -9,6 +9,7 @@ fn main() {
     let mut ctx = ExternContext::default();
     ctx.insert_input(&test_input_name, Value::Vec2([420.0, 69.0]));
 
+    /*
     let node = Rc::new(vorpal_core::Node::Make(
         vec![
             Rc::new(vorpal_core::Node::Constant(Value::Scalar(1.0))),
@@ -18,6 +19,8 @@ fn main() {
         ],
         DataType::Vec4,
     ));
+    */
+    let node = Rc::new(vorpal_core::Node::ComponentFn(vorpal_core::ComponentFn::Sine, Rc::new(vorpal_core::Node::Constant(Value::Scalar(1.0)))));
 
     dbg!(evaluate_node(&node, &ctx)).unwrap();
 }

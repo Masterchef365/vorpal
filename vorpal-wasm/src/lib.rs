@@ -19,12 +19,20 @@ impl Engine {
     }
 
     pub fn eval(&mut self, node: &Node, ctx: &ExternContext) -> Result<Value> {
+        // Generate code
         let mut codegen = CodeGenerator::new();
-
         let (wat, final_output_dtype) = codegen.compile_to_wat(node)?;
-        let module = Module::new(&self.wasm_engine, wat)?;
+
+        let mut linker = Linker::new(&self.wasm_engine);
+        let kernel_module = Module::new(&self.wasm_engine, wat)?;
+        let builtins_wasm = include_bytes!("../../target/wasm32-unknown-unknown/release/vorpal_wasm_builtins.wasm");
+        let builtins_module = Module::new(&self.wasm_engine, builtins_wasm)?;
+
         let mut store = Store::new(&self.wasm_engine, ());
-        let instance = Instance::new(&mut store, &module, &[])?;
+        linker.module(&mut store, "builtins", &builtins_module)?;
+
+        //let instance = Instance::new(&mut store, &kernel_module, &[])?;
+        let instance = linker.instantiate(&mut store, &kernel_module)?;
 
         self.exec_instance(&codegen, &instance, &mut store, ctx, final_output_dtype)
     }
@@ -155,8 +163,13 @@ impl CodeGenerator {
             writeln!(&mut output_stack_text, "local.get ${var_id}_{lane}").unwrap();
         }
 
+        let builtin_imports = r#"
+(import "builtins" "sine" (func $builtin_sine (param f32) (result f32)))
+        "#;
+
         let module_text = format!(
             r#"(module
+  {builtin_imports}
   (func $kernel {param_list_text} {result_list_text}
 ;; Local variables
 {locals_text}
@@ -388,6 +401,7 @@ impl CodeGenerator {
                         ComponentFn::Ceil => "f32.ceil",
                         ComponentFn::Floor => "f32.floor",
                         ComponentFn::Abs => "f32.abs",
+                        ComponentFn::Sine => "call $builtin_sine",
                         _ => todo!("{}", func),
                     };
 
