@@ -275,14 +275,15 @@ impl CodeGenerator {
                 assert_eq!(index_dtype, DataType::Scalar);
 
                 writeln!(text, ";; Get component ${out_var_id} = ${vector_id}[${index_id}]").unwrap();
-                writeln!(text, "f32.const 0 ;; Default value").unwrap();
-                for (i, lane) in vector_dtype.lane_names().enumerate() {
+                for lane in vector_dtype.lane_names().collect::<Vec<_>>().iter().rev() {
                     writeln!(text, "local.get ${vector_id}_{lane}").unwrap();
+                }
+                for i in 1..vector_dtype.lanes() {
                     // Check if the index equals this lane's index...
                     writeln!(text, "local.get ${index_id}_x ;;").unwrap();
                     writeln!(text, "f32.floor").unwrap();
                     writeln!(text, "f32.const {}.0", i).unwrap();
-                    writeln!(text, "f32.eq").unwrap();
+                    writeln!(text, "f32.gt").unwrap();
                     // Then set the output to this value
                     writeln!(text, "select").unwrap();
                 }
