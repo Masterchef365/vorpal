@@ -257,8 +257,15 @@ impl CodeGenerator {
             // Don't need to do anything, input is already provided for us
             Node::ExternInput(_, _) => (),
             Node::ComponentInfixOp(a, infix, b) => {
-                let (a_id, _) = self.locals[&HashRcByPtr(a.clone())];
-                let (b_id, _) = self.locals[&HashRcByPtr(b.clone())];
+                // Visit child nodes first
+                let a = HashRcByPtr(a.clone());
+                let b = HashRcByPtr(b.clone());
+                self.compile_to_wat_recursive(&a, text, visited);
+                self.compile_to_wat_recursive(&b, text, visited);
+
+                // Write comment
+                let (a_id, _) = self.locals[&a];
+                let (b_id, _) = self.locals[&b];
                 let (out_var_id, out_dtype) = self.locals[node];
                 writeln!(
                     text,
@@ -266,6 +273,8 @@ impl CodeGenerator {
                     infix.symbol()
                 )
                 .unwrap();
+
+                // Write code
                 for lane in out_dtype.lane_names() {
                     writeln!(text, "local.get ${a_id}_{lane}").unwrap();
                     writeln!(text, "local.get ${b_id}_{lane}").unwrap();
