@@ -206,6 +206,19 @@ impl ComponentFn {
             Self::Abs => x.abs(),
         }
     }
+
+    pub fn symbol(&self) -> &'static str {
+        match self {
+            Self::Cosine => "cos",
+            Self::Sine => "sin",
+            Self::Tangent => "tan",
+            Self::NaturalLog => "ln",
+            Self::NaturalExp => "e^",
+            Self::Ceil => "ceil",
+            Self::Floor => "floor",
+            Self::Abs => "abs",
+        }
+    }
 }
 
 impl ComponentInfixOp {
@@ -235,16 +248,16 @@ impl ComponentInfixOp {
         }
     }
 
-    pub fn symbol(&self) -> char {
+    pub fn symbol(&self) -> &'static str {
         match self {
-            Self::Add => '+',
-            Self::Subtract => '-',
-            Self::Multiply => '*',
-            Self::Divide => '/',
-            Self::Power => '^',
-            Self::Logbase => 'L',
-            Self::GreaterThan => '>',
-            Self::LessThan => '<',
+            Self::Add => "+",
+            Self::Subtract => "-",
+            Self::Multiply => "*",
+            Self::Divide => "/",
+            Self::Power => "^",
+            Self::Logbase => "logbase",
+            Self::GreaterThan => ">",
+            Self::LessThan => "<",
         }
     }
 }

@@ -367,6 +367,34 @@ impl CodeGenerator {
                 }
                 writeln!(text, "local.set ${out_var_id}_x").unwrap();
             }
+            Node::ComponentFn(func, a) => {
+                // Visit child nodes first
+                let a = HashRcByPtr(a.clone());
+                self.compile_to_wat_recursive(&a, text, visited);
+
+                // Write comment
+                let (a_id, _) = self.locals[&a];
+                writeln!(
+                    text,
+                    ";; Component function ${out_var_id} = {}(${a_id})",
+                    func.symbol(),
+                )
+                .unwrap();
+
+                // Write code
+                for lane in out_dtype.lane_names() {
+                    writeln!(text, "local.get ${a_id}_{lane}").unwrap();
+                    let op_text = match func {
+                        ComponentFn::Ceil => "f32.ceil",
+                        ComponentFn::Floor => "f32.floor",
+                        ComponentFn::Abs => "f32.abs",
+                        _ => todo!("{}", func),
+                    };
+
+                    writeln!(text, "{}", op_text).unwrap();
+                    writeln!(text, "local.set ${out_var_id}_{lane}").unwrap();
+                }
+            }
             _ => todo!("Node type {:?}", node.0)
         }
 
