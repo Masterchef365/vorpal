@@ -51,7 +51,7 @@ impl Engine {
 
         // Create output list
         let mut results = vec![];
-        params.extend((0..final_output_dtype.lanes()).map(|_| Val::F32(0_f32.to_bits())));
+        results.extend((0..final_output_dtype.lanes()).map(|_| Val::F32(0_f32.to_bits())));
 
         // Call the function
         kernel.call(&mut store, &params, &mut results)?;
