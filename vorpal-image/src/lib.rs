@@ -23,14 +23,18 @@ pub extern "C" fn make_image(width: u32, height: u32, time: f32) -> *const f32 {
         *image = vec![0_f32; (width * height * 4) as usize];
         for y in 0..height {
             for x in 0..width {
-                /*let (r, g, b, a) = unsafe {
+                let (r, g, b, a) = unsafe {
                     special_image_function(width as f32, height as f32, x as f32, y as f32, time)
-                };*/
+                };
+
+                /*
                 let r = x as f32 / width as f32;
                 let g = y as f32 / height as f32;
                 let b = time.cos();
                 let a = 0.;
-                let base = (x * 4 + y * width * 4 + 0) as usize;
+                */
+
+                let base = (x * 4 + y * width * 4) as usize;
                 image[base + 0] = r;
                 image[base + 1] = g;
                 image[base + 2] = b;

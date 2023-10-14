@@ -81,6 +81,8 @@ impl Engine {
             bytemuck::cast_slice_mut(&mut out_image),
         )?;
 
+        dbg!(&out_image);
+
         Ok(out_image)
     }
 

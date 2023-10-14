@@ -142,7 +142,7 @@ impl eframe::App for NodeGraphExample {
             self.nodes.show(ui);
         });
         egui::SidePanel::right("options").show(ctx, |ui| {
-            ui.checkbox(&mut self.use_wasm, "Use WASM for active node");
+            ui.checkbox(&mut self.use_wasm, "Use WASM");
             let maybe_node = self.nodes.extract_active_node();
 
             let text = match maybe_node {
