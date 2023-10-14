@@ -20,7 +20,10 @@ fn main() {
         DataType::Vec4,
     ));
     */
-    let node = Rc::new(vorpal_core::Node::ComponentFn(vorpal_core::ComponentFn::Sine, Rc::new(vorpal_core::Node::Constant(Value::Scalar(1.0)))));
+    let node = Rc::new(vorpal_core::Node::ComponentFn(
+        vorpal_core::ComponentFn::Abs,
+        Rc::new(vorpal_core::Node::Constant(Value::Scalar(3.0))),
+    ));
 
     dbg!(evaluate_node(&node, &ctx)).unwrap();
 }

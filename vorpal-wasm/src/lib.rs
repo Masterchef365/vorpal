@@ -165,6 +165,12 @@ impl CodeGenerator {
 
         let builtin_imports = r#"
 (import "builtins" "sine" (func $builtin_sine (param f32) (result f32)))
+(import "builtins" "cosine" (func $builtin_cosine (param f32) (result f32)))
+(import "builtins" "tangent" (func $builtin_tangent (param f32) (result f32)))
+(import "builtins" "natural_log" (func $builtin_natural_log (param f32) (result f32)))
+(import "builtins" "natural_exp" (func $builtin_natural_exp (param f32) (result f32)))
+(import "builtins" "greater_than" (func $builtin_greater_than (param f32 f32) (result f32)))
+(import "builtins" "less_than" (func $builtin_less_than (param f32 f32) (result f32)))
         "#;
 
         let module_text = format!(
@@ -343,7 +349,10 @@ impl CodeGenerator {
                         ComponentInfixOp::Subtract => "f32.sub",
                         ComponentInfixOp::Divide => "f32.div",
                         ComponentInfixOp::Multiply => "f32.mul",
-                        _ => todo!("{}", infix),
+                        ComponentInfixOp::Power => "call $builtin_power",
+                        ComponentInfixOp::Logbase => "call $builtin_logbase",
+                        ComponentInfixOp::GreaterThan => "call $builtin_greater_than",
+                        ComponentInfixOp::LessThan => "call $builtin_less_than",
                     };
 
                     writeln!(text, "{}", op_text).unwrap();
@@ -402,7 +411,10 @@ impl CodeGenerator {
                         ComponentFn::Floor => "f32.floor",
                         ComponentFn::Abs => "f32.abs",
                         ComponentFn::Sine => "call $builtin_sine",
-                        _ => todo!("{}", func),
+                        ComponentFn::Cosine => "call $builtin_cosine",
+                        ComponentFn::Tangent => "call $builtin_tangent",
+                        ComponentFn::NaturalLog => "call $builtin_natural_log",
+                        ComponentFn::NaturalExp => "call $builtin_natural_exp",
                     };
 
                     writeln!(text, "{}", op_text).unwrap();
