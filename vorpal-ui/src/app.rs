@@ -213,10 +213,14 @@ pub fn array_to_imagedata(array: &ndarray::NdArray<f32>) -> ImageData {
     assert_eq!(array.shape()[2], 4, "Image must be RGBA");
     assert!(array.len() > 0);
     let dims = [array.shape()[0], array.shape()[1]];
-    let rgb: Vec<u8> = array
+    let mut rgba: Vec<u8> = array
         .data()
         .iter()
         .map(|value| (value.clamp(0., 1.) * 255.0) as u8)
         .collect();
-    ImageData::Color(ColorImage::from_rgba_unmultiplied(dims, &rgb))
+
+    // Set alpha to one. TODO: UNDO THIS!!
+    rgba.iter_mut().skip(3).step_by(4).for_each(|v| *v = u8::MAX);
+
+    ImageData::Color(ColorImage::from_rgba_unmultiplied(dims, &rgba))
 }
