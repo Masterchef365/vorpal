@@ -3,6 +3,11 @@ use std::fmt::Write;
 use vorpal_core::*;
 use wasm_bridge::*;
 
+// TODO: 
+// Change Value to something like VectorValue<T, const N: usize>([T; N]);
+// * Other datatypes
+// * Longer vectors(?) - go by powers of two; octonions!
+
 pub fn evaluate_node(node: &Node, ctx: &ExternContext) -> Result<Value> {
     Engine::new()?.eval(&node, ctx)
 }
@@ -25,7 +30,8 @@ impl Engine {
 
         let mut linker = Linker::new(&self.wasm_engine);
         let kernel_module = Module::new(&self.wasm_engine, wat)?;
-        let builtins_wasm = include_bytes!("../../target/wasm32-unknown-unknown/release/vorpal_wasm_builtins.wasm");
+        let builtins_wasm =
+            include_bytes!("../../target/wasm32-unknown-unknown/release/vorpal_wasm_builtins.wasm");
         let builtins_module = Module::new(&self.wasm_engine, builtins_wasm)?;
 
         let mut store = Store::new(&self.wasm_engine, ());
@@ -54,7 +60,11 @@ impl Engine {
         for name in codegen.func_input_list.iter() {
             let input_val = ctx.inputs()[name];
             assert_eq!(codegen.inputs[name].1, input_val.dtype());
-            params.extend(input_val.iter_vector_floats().map(|f| Val::F32(f.to_bits())));
+            params.extend(
+                input_val
+                    .iter_vector_floats()
+                    .map(|f| Val::F32(f.to_bits())),
+            );
         }
 
         // Create output list
@@ -163,26 +173,32 @@ impl CodeGenerator {
             writeln!(&mut output_stack_text, "local.get ${var_id}_{lane}").unwrap();
         }
 
-        let builtin_imports = r#"
-(import "builtins" "sine" (func $builtin_sine (param f32) (result f32)))
+        let builtin_imports = r#"(import "builtins" "sine" (func $builtin_sine (param f32) (result f32)))
 (import "builtins" "cosine" (func $builtin_cosine (param f32) (result f32)))
 (import "builtins" "tangent" (func $builtin_tangent (param f32) (result f32)))
 (import "builtins" "natural_log" (func $builtin_natural_log (param f32) (result f32)))
 (import "builtins" "natural_exp" (func $builtin_natural_exp (param f32) (result f32)))
+
+(import "builtins" "power" (func $builtin_power (param f32 f32) (result f32)))
+(import "builtins" "logbase" (func $builtin_logbase (param f32 f32) (result f32)))
 (import "builtins" "greater_than" (func $builtin_greater_than (param f32 f32) (result f32)))
-(import "builtins" "less_than" (func $builtin_less_than (param f32 f32) (result f32)))
-        "#;
+(import "builtins" "less_than" (func $builtin_less_than (param f32 f32) (result f32)))"#;
 
         let module_text = format!(
             r#"(module
-  {builtin_imports}
+;; == External imports ==
+{builtin_imports}
+
+;; == Function declaration ==
   (func $kernel {param_list_text} {result_list_text}
+
 ;; Local variables
 {locals_text}
-;; Compiled function
+;; == Compiled function (main program) ==
 {function_body_text}
-;; Output stacking
+;; == Output stacking ==
 {output_stack_text}
+;; == Function end ==
   )
   (export "kernel" (func $kernel))
   (memory (;0;) 16)
@@ -190,7 +206,7 @@ impl CodeGenerator {
 )"#
         );
 
-        println!("{}", module_text);
+        eprintln!("{}", module_text);
 
         Ok((module_text, final_output_dtype))
     }
@@ -281,7 +297,6 @@ impl CodeGenerator {
                     writeln!(text, "local.get ${a_id}_x").unwrap();
                     writeln!(text, "local.set ${out_var_id}_{lane}").unwrap();
                 }
-
             }
             Node::GetComponent(vector_node, index_node) => {
                 for sub_node in [vector_node, index_node] {
@@ -293,7 +308,11 @@ impl CodeGenerator {
                 let (index_id, index_dtype) = self.locals[&HashRcByPtr(index_node.clone())];
                 assert_eq!(index_dtype, DataType::Scalar);
 
-                writeln!(text, ";; Get component ${out_var_id} = ${vector_id}[${index_id}]").unwrap();
+                writeln!(
+                    text,
+                    ";; Get component ${out_var_id} = ${vector_id}[${index_id}]"
+                )
+                .unwrap();
                 for lane in vector_dtype.lane_names().collect::<Vec<_>>().iter().rev() {
                     writeln!(text, "local.get ${vector_id}_{lane}").unwrap();
                 }
@@ -308,21 +327,16 @@ impl CodeGenerator {
                 }
 
                 writeln!(text, "local.set ${out_var_id}_x").unwrap();
-
             }
             Node::ExternInput(_, _) => (),
             Node::Constant(value) => {
-                writeln!(
-                    text,
-                    ";; Constant ${out_var_id} = {value:?}",
-                )
-                .unwrap();
+                writeln!(text, ";; Constant ${out_var_id} = {value:?}",).unwrap();
 
                 for (float, lane) in value.iter_vector_floats().zip(value.dtype().lane_names()) {
                     writeln!(text, "f32.const {float}").unwrap();
                     writeln!(text, "local.set ${out_var_id}_{lane}").unwrap();
                 }
-            },
+            }
             Node::ComponentInfixOp(a, infix, b) => {
                 // Visit child nodes first
                 let a = HashRcByPtr(a.clone());
@@ -372,11 +386,7 @@ impl CodeGenerator {
 
                 assert_eq!(a_dtype, b_dtype);
 
-                writeln!(
-                    text,
-                    ";; Dot product ${out_var_id} = ${a_id} * ${b_id}",
-                )
-                .unwrap();
+                writeln!(text, ";; Dot product ${out_var_id} = ${a_id} * ${b_id}",).unwrap();
 
                 // Write code
                 for (idx, lane) in a_dtype.lane_names().enumerate() {
@@ -421,7 +431,7 @@ impl CodeGenerator {
                     writeln!(text, "local.set ${out_var_id}_{lane}").unwrap();
                 }
             }
-            _ => todo!("Node type {:?}", node.0)
+            _ => todo!("Node type {:?}", node.0),
         }
 
         writeln!(text).unwrap();
