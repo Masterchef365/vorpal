@@ -25,7 +25,7 @@ impl Engine {
 
     pub fn eval(&mut self, node: &Node, ctx: &ExternContext) -> Result<Value> {
         // Generate code
-        let input_list = ctx
+let input_list = ctx
             .inputs()
             .iter()
             .map(|(name, value)| (name.clone(), value.dtype()))
@@ -212,10 +212,10 @@ impl CodeAnalysis {
         let special_image_function = r#"
 (func $special_image_function (param i32 f32 f32 f32 f32 f32)
 ;; Pull destination information onto the stack
-    local.get 0
-    local.get 0
-    local.get 0
-    local.get 0
+    (local $x f32)
+    (local $y f32)
+    (local $z f32)
+    (local $w f32)
 ;; These args are passed directly to the kernel
     local.get 1
     local.get 2
@@ -223,10 +223,23 @@ impl CodeAnalysis {
     local.get 4
     local.get 5
     call $kernel
-;; Pop kernel's implicit stack and store it on Rust's stack
+;; Pop kernel's implicit stack and store it in local variables
+    local.set $w
+    local.set $z
+    local.set $y
+    local.set $x
+;; Store local variables on Rust's stack
+    local.get 0
+    local.get $w
     f32.store offset=12
+    local.get 0
+    local.get $z
     f32.store offset=8
+    local.get 0
+    local.get $y
     f32.store offset=4
+    local.get 0
+    local.get $x
     f32.store offset=0
 )
  "#;
@@ -252,7 +265,7 @@ impl CodeAnalysis {
   (memory (;0;) 16)
   (export "memory" (memory 0))
 )"#
-        );
+);
 
         let lined_text: String = module_text
             .lines()
