@@ -63,6 +63,11 @@ impl Engine {
         let (kernel_module, _analysis) = self.compile(node, input_list, true)?;
 
         let mut linker = Linker::new(&mut self.wasm_engine);
+
+        let memory_ty = MemoryType::new(100, None);
+        let mem = Memory::new(&mut store, memory_ty)?;
+        linker.define(&store, "env", "memory", mem)?;
+
         linker.module(&mut store, "builtins", &self.builtins_module()?)?;
         linker.module(&mut store, "kernel", &kernel_module)?;
         let instance = linker.instantiate(&mut store, &self.image_module()?)?;
@@ -71,9 +76,6 @@ impl Engine {
 
         let ptr = func.call(&mut store, (width, height, time))?;
 
-        let mem = instance
-            .get_memory(&mut store, "memory")
-            .expect("No memory");
         let mut out_image = vec![0_f32; (width * height * 4) as usize];
         mem.read(
             &mut store,
@@ -81,7 +83,7 @@ impl Engine {
             bytemuck::cast_slice_mut(&mut out_image),
         )?;
 
-        dbg!(&out_image);
+        //dbg!(&out_image);
 
         Ok(out_image)
     }
@@ -311,8 +313,12 @@ impl CodeAnalysis {
 (export "special_image_function" (func $special_image_function))
  "# } else { "" };
 
+        let special_imports = if special { r#"(import "env" "memory" (memory (;0;) 17))"# } else { "" };
+
         let module_text = format!(
             r#"(module
+;; Import memory if in special mode
+{special_imports}
 ;; == External imports ==
 {builtin_imports}
 
@@ -329,8 +335,6 @@ impl CodeAnalysis {
   )
 {special_image_function}
   (export "kernel" (func $kernel))
-  (memory (;0;) 16)
-  (export "memory" (memory 0))
 )"#
         );
 
