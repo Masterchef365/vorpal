@@ -1,7 +1,7 @@
 use std::time::Instant;
 
 use eframe::{
-    egui::{self, TextureOptions, Ui, TextStyle},
+    egui::{self, TextStyle, TextureOptions, Ui},
     epaint::{ColorImage, ImageData, ImageDelta, TextureId, Vec2},
 };
 use ndarray::*;
@@ -71,6 +71,10 @@ impl NodeGraphExample {
     }
 }
 
+impl NodeGraphExample {
+    fn save_wat_file(&self) {}
+}
+
 impl eframe::App for NodeGraphExample {
     #[cfg(feature = "persistence")]
     /// If the persistence function is enabled,
@@ -119,6 +123,11 @@ impl eframe::App for NodeGraphExample {
         egui::TopBottomPanel::top("top").show(ctx, |ui| {
             egui::menu::bar(ui, |ui| {
                 egui::widgets::global_dark_light_mode_switch(ui);
+                ui.menu_button("File", |ui| {
+                    if ui.button("Save .wat").clicked() {
+                        self.save_wat_file();
+                    }
+                });
             });
         });
         egui::SidePanel::left("nodes").show(ctx, |ui| {
@@ -132,7 +141,10 @@ impl eframe::App for NodeGraphExample {
                 Ok(Some(node)) => {
                     let result = match self.use_wasm {
                         true => self.engine.eval(&node, &self.nodes.context),
-                        false => vorpal_core::native_backend::evaluate_node(&node, &self.nodes.context).map_err(|e| e.into()),
+                        false => {
+                            vorpal_core::native_backend::evaluate_node(&node, &self.nodes.context)
+                                .map_err(|e| e.into())
+                        }
                     };
 
                     match result {
