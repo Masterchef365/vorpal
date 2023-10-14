@@ -114,7 +114,7 @@ impl eframe::App for NodeGraphExample {
                     };
 
                     for (k, component) in result.into_iter().enumerate() {
-                        self.image_data[[i, j, k]] = component;
+                        self.image_data[[j, i, k]] = component;
                     }
                 }
             }
