@@ -166,7 +166,7 @@ impl NodeTemplateTrait for MyNodeTemplate {
 
         match self {
             MyNodeTemplate::Make(dtype) => {
-                for part in XYZW.iter().take(dtype.lanes()) {
+                for part in XYZW.iter().take(dtype.n_lanes()) {
                     add_input(graph, *part, DataType::Scalar);
                 }
                 add_output(graph, "out", *dtype);
@@ -430,7 +430,7 @@ fn extract_node_recursive(
         }
         MyNodeTemplate::Make(dtype) => Rc::new(vorpal_core::Node::Make(
             XYZW.iter()
-                .take(dtype.lanes())
+                .take(dtype.n_lanes())
                 .map(|name| get_input_node(graph, node_id, name, cache))
                 .collect::<Result<_, _>>()?,
             *dtype,

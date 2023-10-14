@@ -98,7 +98,7 @@ impl DataType {
     }
 
     pub fn lane_names(&self) -> impl Iterator<Item = char> {
-        "xyzw".chars().take(self.lanes())
+        "xyzw".chars().take(self.n_lanes())
     }
 }
 
@@ -267,7 +267,7 @@ impl DataType {
         [Self::Scalar, Self::Vec2, Self::Vec3, Self::Vec4]
     }
 
-    pub fn lanes(&self) -> usize {
+    pub fn n_lanes(&self) -> usize {
         match self {
             Self::Scalar => 1,
             Self::Vec2 => 2,

@@ -3,7 +3,7 @@ use std::fmt::Write;
 use vorpal_core::*;
 use wasm_bridge::*;
 
-// TODO: 
+// TODO:
 // Change Value to something like VectorValue<T, const N: usize>([T; N]);
 // * Other datatypes
 // * Longer vectors(?) - go by powers of two; octonions!
@@ -25,8 +25,12 @@ impl Engine {
 
     pub fn eval(&mut self, node: &Node, ctx: &ExternContext) -> Result<Value> {
         // Generate code
-        let mut codegen = CodeGenerator::new();
-        let (wat, final_output_dtype) = codegen.compile_to_wat(node)?;
+        let analysis = CodeAnalysis::new(Rc::new(node.clone()));
+        let input_list = &ctx.inputs()
+                .iter()
+                .map(|(name, value)| (name.clone(), value.dtype()))
+                .collect::<Vec<(ExternInputId, DataType)>>();
+        let wat = analysis.compile_to_wat(&input_list)?;
 
         let mut linker = Linker::new(&self.wasm_engine);
         let kernel_module = Module::new(&self.wasm_engine, wat)?;
@@ -40,16 +44,15 @@ impl Engine {
         //let instance = Instance::new(&mut store, &kernel_module, &[])?;
         let instance = linker.instantiate(&mut store, &kernel_module)?;
 
-        self.exec_instance(&codegen, &instance, &mut store, ctx, final_output_dtype)
+        self.exec_instance(&analysis, &instance, &mut store, ctx)
     }
 
     fn exec_instance(
         &mut self,
-        codegen: &CodeGenerator,
+        analysis: &CodeAnalysis,
         instance: &Instance,
         mut store: &mut Store<()>,
         ctx: &ExternContext,
-        final_output_dtype: DataType,
     ) -> Result<Value> {
         let kernel = instance
             .get_func(&mut store, "kernel")
@@ -57,9 +60,9 @@ impl Engine {
 
         // Create parameter list
         let mut params = vec![];
-        for name in codegen.func_input_list.iter() {
+        for name in analysis.func_input_list.iter() {
             let input_val = ctx.inputs()[name];
-            assert_eq!(codegen.inputs[name].1, input_val.dtype());
+            assert_eq!(analysis.inputs[name].1, input_val.dtype());
             params.extend(
                 input_val
                     .iter_vector_floats()
@@ -69,13 +72,14 @@ impl Engine {
 
         // Create output list
         let mut results = vec![];
-        results.extend((0..final_output_dtype.lanes()).map(|_| Val::F32(0_f32.to_bits())));
+        let output_dtype = analysis.final_output_dtype();
+        results.extend((0..output_dtype.n_lanes()).map(|_| Val::F32(0_f32.to_bits())));
 
         // Call the function
         kernel.call(&mut store, &params, &mut results)?;
 
         // Unwind the results
-        Ok(match final_output_dtype {
+        Ok(match output_dtype {
             DataType::Scalar => Value::Scalar(results[0].f32().unwrap()),
             DataType::Vec2 => {
                 let mut val = [0.; 2];
@@ -105,45 +109,56 @@ impl Engine {
 /// Denotes the "name" of a local variable; e.g. local.get 9
 type LocalVarId = u32;
 
-/// Compile a node into its equivalent
-#[derive(Default)]
-struct CodeGenerator {
+/// Metadata for a node graph
+struct CodeAnalysis {
     locals: HashMap<HashRcByPtr<Node>, (LocalVarId, DataType)>,
     inputs: HashMap<ExternInputId, (LocalVarId, DataType)>,
     next_var_id: LocalVarId,
     func_input_list: Vec<ExternInputId>,
+    root: HashRcByPtr<Node>,
 }
 
-impl CodeGenerator {
-    pub fn new() -> Self {
-        Self {
+impl CodeAnalysis {
+    fn new(node: Rc<Node>) -> Self {
+        let root = HashRcByPtr(node.clone());
+
+        let mut instance = Self {
             next_var_id: 0,
             inputs: Default::default(),
             locals: Default::default(),
             func_input_list: vec![],
-        }
+            root,
+        };
+
+        instance.find_inputs_and_locals_recursive(node);
+        instance
     }
 
-    pub fn compile_to_wat(&mut self, node: &Node) -> Result<(String, DataType)> {
-        let node = Rc::new(node.clone());
+    pub fn final_output_dtype(&self) -> DataType {
+        let (_, final_output_dtype) = self.locals[&self.root];
+        final_output_dtype
+    }
 
-        // Find input and output dtypes
-        let final_output_dtype = self.find_inputs_and_locals_recursive(node.clone());
-
+    pub fn compile_to_wat(&self, input_list: &[(ExternInputId, DataType)]) -> Result<String> {
         // Build parameter list
         let mut input_var_ids = HashSet::new();
         let mut param_list_text = String::new();
-        for (name, (var_id, dtype)) in &self.inputs {
-            for lane in "xyzw".chars().take(dtype.lanes()) {
-                write!(&mut param_list_text, "(param ${var_id}_{lane} f32) ").unwrap();
+        for (input_name, input_dtype) in input_list {
+            for lane in "xyzw".chars().take(input_dtype.n_lanes()) {
+                if let Some((input_var_id, expected_dtype)) = self.inputs.get(input_name) {
+                    assert_eq!(expected_dtype, input_dtype);
+                    write!(&mut param_list_text, "(param ${input_var_id}_{lane} f32) ").unwrap();
+                    input_var_ids.insert(input_var_id);
+                } else {
+                    // Dummy parameter
+                    write!(&mut param_list_text, "(param f32) ").unwrap();
+                }
             }
-            input_var_ids.insert(var_id);
-            self.func_input_list.push(name.clone());
         }
 
         // Build result list
         let mut result_list_text = "(result ".to_string();
-        for _ in 0..final_output_dtype.lanes() {
+        for _ in 0..self.final_output_dtype().n_lanes() {
             result_list_text += "f32 ";
         }
         result_list_text += ")";
@@ -156,20 +171,19 @@ impl CodeGenerator {
                 continue;
             }
 
-            for lane in "xyzw".chars().take(dtype.lanes()) {
+            for lane in "xyzw".chars().take(dtype.n_lanes()) {
                 writeln!(&mut locals_text, "(local ${var_id}_{lane} f32) ").unwrap();
             }
         }
 
         // Compile instructions
         let mut function_body_text = String::new();
-        let hash_node = HashRcByPtr(node.clone());
-        self.compile_to_wat_recursive(&hash_node, &mut function_body_text, &mut HashSet::new());
+        self.compile_to_wat_recursive(&self.root, &mut function_body_text, &mut HashSet::new());
 
         // Build output stack
         let mut output_stack_text = String::new();
-        let (var_id, _) = self.locals[&hash_node];
-        for lane in final_output_dtype.lane_names() {
+        let (var_id, _) = self.locals[&self.root];
+        for lane in self.final_output_dtype().lane_names() {
             writeln!(&mut output_stack_text, "local.get ${var_id}_{lane}").unwrap();
         }
 
@@ -208,7 +222,7 @@ impl CodeGenerator {
 
         eprintln!("{}", module_text);
 
-        Ok((module_text, final_output_dtype))
+        Ok(module_text)
     }
 
     fn find_inputs_and_locals_recursive(&mut self, node: Rc<Node>) -> DataType {
@@ -282,7 +296,7 @@ impl CodeGenerator {
         match &*node.0 {
             // Don't need to do anything, input is already provided for us
             Node::Make(sub_nodes, dtype) => {
-                assert_eq!(dtype.lanes(), sub_nodes.len());
+                assert_eq!(dtype.n_lanes(), sub_nodes.len());
 
                 for sub_node in sub_nodes {
                     let sub_node = HashRcByPtr(sub_node.clone());
@@ -316,7 +330,7 @@ impl CodeGenerator {
                 for lane in vector_dtype.lane_names().collect::<Vec<_>>().iter().rev() {
                     writeln!(text, "local.get ${vector_id}_{lane}").unwrap();
                 }
-                for i in 1..vector_dtype.lanes() {
+                for i in 1..vector_dtype.n_lanes() {
                     // Check if the index equals this lane's index...
                     writeln!(text, "local.get ${index_id}_x ;;").unwrap();
                     writeln!(text, "f32.floor").unwrap();
@@ -393,7 +407,7 @@ impl CodeGenerator {
                     writeln!(text, "local.get ${a_id}_{lane}").unwrap();
                     writeln!(text, "local.get ${b_id}_{lane}").unwrap();
                     writeln!(text, "f32.mul").unwrap();
-                    if idx + 1 != out_dtype.lanes() {
+                    if idx + 1 != out_dtype.n_lanes() {
                         writeln!(text, "f32.add").unwrap();
                     }
                 }

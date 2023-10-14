@@ -64,8 +64,8 @@ pub fn evaluate_node(node: &Node, ctx: &ExternContext) -> Result<Value, EvalErro
         Node::GetComponent(value, index) => {
             let value = evaluate_node(value, ctx)?;
             if let Value::Scalar(index) = evaluate_node(index, ctx)? {
-                let index = index.clamp(0., value.dtype().lanes() as f32);
-                let index = (index as usize).clamp(0, value.dtype().lanes() - 1);
+                let index = index.clamp(0., value.dtype().n_lanes() as f32);
+                let index = (index as usize).clamp(0, value.dtype().n_lanes() - 1);
                 Ok(Value::Scalar(match value {
                     Value::Scalar(val) => val,
                     Value::Vec2(arr) => arr[index],
