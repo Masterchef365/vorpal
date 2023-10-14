@@ -83,8 +83,8 @@ pub struct Sampler(NdArray<f32>, DataType, DataType);
 
 #[derive(Default)]
 pub struct ExternContext {
-    inputs: HashMap<ExternInputId, Value>,
-    samplers: HashMap<ExternSamplerId, Sampler>,
+    pub inputs: HashMap<ExternInputId, Value>,
+    pub samplers: HashMap<ExternSamplerId, Sampler>,
 }
 
 impl DataType {

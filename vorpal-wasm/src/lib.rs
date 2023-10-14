@@ -37,17 +37,14 @@ impl Engine {
     }
 
     pub fn eval_image(&mut self, node: &Node, ctx: &ExternContext) -> Result<Vec<f32>> {
+        // Assembly input list
         const RESOLUTION_KEY: &str = "Resolution (pixels)";
         const TIME_KEY: &str = "Time (seconds)";
         const POS_KEY: &str = "Position (pixels)";
+
         let res_key = &ExternInputId::new(RESOLUTION_KEY.into());
         let time_key = &ExternInputId::new(TIME_KEY.into());
         let pos_key = &ExternInputId::new(POS_KEY.into());
-        let _key = &ExternInputId::new(TIME_KEY.into());
-        let Value::Vec2([width, height]) = ctx.inputs()[&res_key] else { panic!("Wrong vector type") };
-        let Value::Scalar(time) = ctx.inputs()[&time_key] else { panic!("Wrong vector type") };
-        let width = width as u32;
-        let height = height as u32;
 
         let input_list = vec![
             // See vorpal-wasm-builtins' special_image_function
@@ -56,46 +53,76 @@ impl Engine {
             (time_key.clone(), DataType::Scalar),
         ];
 
+        let _key = &ExternInputId::new(TIME_KEY.into());
+        let Value::Vec2([width, height]) = ctx.inputs()[&res_key] else {
+            panic!("Wrong vector type")
+        };
+        let Value::Scalar(time) = ctx.inputs()[&time_key] else {
+            panic!("Wrong vector type")
+        };
+        let width = width as u32;
+        let height = height as u32;
+
         let mut store = Store::new(&self.wasm_engine, ());
-        let (instance, _analysis) = self.compile(node, &mut store, input_list)?;
+        let (kernel_module, _analysis) = self.compile(node, &mut store, input_list)?;
+
+        let mut linker = Linker::new(&mut self.wasm_engine);
+        linker.module(&mut store, "builtins", &self.builtins_module()?)?;
+        linker.module(&mut store, "kernel", &kernel_module)?;
+        let instance = linker.instantiate(&mut store, &self.image_module()?)?;
 
         let func = instance.get_typed_func::<(u32, u32, f32), u32>(&mut store, "make_image")?;
 
         let ptr = func.call(&mut store, (width, height, time))?;
 
-        let mem = instance.get_memory(&mut store, "memory").expect("No memory");
+        let mem = instance
+            .get_memory(&mut store, "memory")
+            .expect("No memory");
         let mut out_image = vec![0_f32; (width * height * 4) as usize];
-        mem.read(&mut store, ptr as usize, bytemuck::cast_slice_mut(&mut out_image))?;
+        mem.read(
+            &mut store,
+            ptr as usize,
+            bytemuck::cast_slice_mut(&mut out_image),
+        )?;
 
         Ok(out_image)
     }
 
-
-    fn compile(&self, node: &Node, mut store: &mut Store<()>, input_list: Vec<(ExternInputId, DataType)>) -> Result<(Instance, CodeAnalysis)> {
-        let analysis = CodeAnalysis::new(Rc::new(node.clone()), input_list);
-        let wat = analysis.compile_to_wat()?;
-
-        let mut linker = Linker::new(&self.wasm_engine);
-        let kernel_module = Module::new(&self.wasm_engine, wat)?;
+    fn builtins_module(&self) -> Result<Module> {
         let builtins_wasm =
             include_bytes!("../../target/wasm32-unknown-unknown/release/vorpal_wasm_builtins.wasm");
-        let builtins_module = Module::new(&self.wasm_engine, builtins_wasm)?;
+        Ok(Module::new(&self.wasm_engine, builtins_wasm)?)
+    }
 
-        linker.module(&mut store, "builtins", &builtins_module)?;
+    fn image_module(&self) -> Result<Module> {
+        let builtins_wasm =
+            include_bytes!("../../target/wasm32-unknown-unknown/release/vorpal_image.wasm");
+        Ok(Module::new(&self.wasm_engine, builtins_wasm)?)
+    }
 
-        //let instance = Instance::new(&mut store, &kernel_module, &[])?;
-        let instance = linker.instantiate(&mut store, &kernel_module)?;
-
-        Ok((instance, analysis))
+    fn compile(
+        &self,
+        node: &Node,
+        mut store: &mut Store<()>,
+        input_list: Vec<(ExternInputId, DataType)>,
+    ) -> Result<(Module, CodeAnalysis)> {
+        let analysis = CodeAnalysis::new(Rc::new(node.clone()), input_list);
+        let wat = analysis.compile_to_wat()?;
+        let kernel_module = Module::new(&self.wasm_engine, wat)?;
+        Ok((kernel_module, analysis))
     }
 
     fn exec_instance(
         &mut self,
         analysis: &CodeAnalysis,
-        instance: &Instance,
+        kernel_module: &Module,
         mut store: &mut Store<()>,
         ctx: &ExternContext,
     ) -> Result<Value> {
+        let mut linker = Linker::new(&mut self.wasm_engine);
+        linker.module(&mut store, "builtins", &self.builtins_module()?)?;
+        let instance = linker.instantiate(&mut store, &kernel_module)?;
+
         let kernel = instance
             .get_func(&mut store, "kernel")
             .ok_or_else(|| anyhow::format_err!("Kernel function not found"))?;

@@ -2717,6 +2717,10 @@ name = "vorpal-core"
 version = "0.1.0"
 
 [[package]]
+name = "vorpal-image"
+version = "0.1.0"
+
+[[package]]
 name = "vorpal-ui"
 version = "0.1.0"
 dependencies = [
