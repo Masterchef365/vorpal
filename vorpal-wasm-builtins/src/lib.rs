@@ -42,3 +42,23 @@ pub extern "C" fn greater_than(lhs: f32, rhs: f32) -> f32 {
 pub extern "C" fn less_than(lhs: f32, rhs: f32) -> f32 {
     f32::from(lhs < rhs)
 }
+
+extern "Rust" {
+    fn special_image_function(width: f32, height: f32, x: f32, y: f32, time: f32) -> (f32, f32, f32, f32);
+}
+
+#[no_mangle]
+pub extern "C" fn make_image(width: u32, height: u32, time: f32) -> *const f32 {
+    let mut image = vec![0_f32; (width * height) as usize];
+    for y in 0..height {
+        for x in 0..width {
+            let (r, g, b, a) = unsafe { special_image_function(width as f32, height as f32, x as f32, y as f32, time) };
+            let base = (x * 4 + y * width * 4 + 0) as usize;
+            image[base + 0] = r;
+            image[base + 1] = g;
+            image[base + 2] = b;
+            image[base + 3] = a;
+        }
+    }
+    image.as_ptr()
+}

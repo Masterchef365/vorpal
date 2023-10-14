@@ -209,6 +209,28 @@ impl CodeAnalysis {
 (import "builtins" "greater_than" (func $builtin_greater_than (param f32 f32) (result f32)))
 (import "builtins" "less_than" (func $builtin_less_than (param f32 f32) (result f32)))"#;
 
+        let special_image_function = r#"
+(func $special_image_function (param i32 f32 f32 f32 f32 f32)
+;; Pull destination information onto the stack
+    local.get 0
+    local.get 0
+    local.get 0
+    local.get 0
+;; These args are passed directly to the kernel
+    local.get 1
+    local.get 2
+    local.get 3
+    local.get 4
+    local.get 5
+    call $kernel
+;; Pop kernel's implicit stack and store it on Rust's stack
+    f32.store offset=12
+    f32.store offset=8
+    f32.store offset=4
+    f32.store offset=0
+)
+ "#;
+
         let module_text = format!(
             r#"(module
 ;; == External imports ==
@@ -225,13 +247,19 @@ impl CodeAnalysis {
 {output_stack_text}
 ;; == Function end ==
   )
+{special_image_function}
   (export "kernel" (func $kernel))
   (memory (;0;) 16)
   (export "memory" (memory 0))
 )"#
         );
 
-        eprintln!("{}", module_text);
+        let lined_text: String = module_text
+            .lines()
+            .enumerate()
+            .map(|(idx, line)| format!("{:>4}: {:}\n", idx + 1, line))
+            .collect();
+        eprintln!("{}", lined_text);
 
         Ok(module_text)
     }
