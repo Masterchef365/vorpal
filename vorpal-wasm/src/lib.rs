@@ -10,12 +10,21 @@ use wasm_bridge::*;
 
 pub struct Engine {
     wasm_engine: wasm_bridge::Engine,
+    cache: Option<CachedCompilation>,
+}
+
+struct CachedCompilation {
+    node: Node,
+    instance: Instance,
+    store: Store<()>,
+    mem: Memory,
 }
 
 impl Engine {
     pub fn new() -> Result<Self> {
         Ok(Self {
             wasm_engine: wasm_bridge::Engine::new(&Default::default())?,
+            cache: None,
         })
     }
 
@@ -49,7 +58,6 @@ impl Engine {
             (time_key.clone(), DataType::Scalar),
         ];
 
-        let _key = &ExternInputId::new(TIME_KEY.into());
         let Value::Vec2([width, height]) = ctx.inputs()[&res_key] else {
             panic!("Wrong vector type")
         };
@@ -59,29 +67,48 @@ impl Engine {
         let width = width as u32;
         let height = height as u32;
 
-        let mut store = Store::new(&self.wasm_engine, ());
-        let (kernel_module, _analysis) = self.compile(node, input_list, true)?;
+        let mut compile_data: CachedCompilation = self
+            .cache
+            .take()
+            .filter(|cache| &cache.node == node)
+            .map(|cache| Ok(cache))
+            .unwrap_or_else(|| -> anyhow::Result<CachedCompilation> {
+                let mut store = Store::new(&self.wasm_engine, ());
+                let (kernel_module, _analysis) = self.compile(node, input_list, true)?;
 
-        let mut linker = Linker::new(&mut self.wasm_engine);
+                let mut linker = Linker::new(&mut self.wasm_engine);
 
-        let memory_ty = MemoryType::new(100, None);
-        let mem = Memory::new(&mut store, memory_ty)?;
-        linker.define(&store, "env", "memory", mem)?;
+                let memory_ty = MemoryType::new(100, None);
+                let mem = Memory::new(&mut store, memory_ty)?;
+                linker.define(&store, "env", "memory", mem)?;
 
-        linker.module(&mut store, "builtins", &self.builtins_module()?)?;
-        linker.module(&mut store, "kernel", &kernel_module)?;
-        let instance = linker.instantiate(&mut store, &self.image_module()?)?;
+                linker.module(&mut store, "builtins", &self.builtins_module()?)?;
+                linker.module(&mut store, "kernel", &kernel_module)?;
 
-        let func = instance.get_typed_func::<(u32, u32, f32), u32>(&mut store, "make_image")?;
+                let instance = linker.instantiate(&mut store, &self.image_module()?)?;
 
-        let ptr = func.call(&mut store, (width, height, time))?;
+                Ok(CachedCompilation {
+                    node: node.clone(),
+                    instance,
+                    store,
+                    mem,
+                })
+            })?;
+
+        let func = compile_data
+            .instance
+            .get_typed_func::<(u32, u32, f32), u32>(&mut compile_data.store, "make_image")?;
+
+        let ptr = func.call(&mut compile_data.store, (width, height, time))?;
 
         let mut out_image = vec![0_f32; (width * height * 4) as usize];
-        mem.read(
-            &mut store,
+        compile_data.mem.read(
+            &mut compile_data.store,
             ptr as usize,
             bytemuck::cast_slice_mut(&mut out_image),
         )?;
+
+        self.cache = Some(compile_data);
 
         //dbg!(&out_image);
 
@@ -266,7 +293,7 @@ impl CodeAnalysis {
         }
 
         let builtin_imports = r#"(import "builtins" "sine" (func $builtin_sine (param f32) (result f32)))
-(import "builtins" "cosine" (func $builtin_cosine (param f32) (result f32)))
+            (import "builtins" "cosine" (func $builtin_cosine (param f32) (result f32)))
 (import "builtins" "tangent" (func $builtin_tangent (param f32) (result f32)))
 (import "builtins" "natural_log" (func $builtin_natural_log (param f32) (result f32)))
 (import "builtins" "natural_exp" (func $builtin_natural_exp (param f32) (result f32)))
@@ -276,7 +303,8 @@ impl CodeAnalysis {
 (import "builtins" "greater_than" (func $builtin_greater_than (param f32 f32) (result f32)))
 (import "builtins" "less_than" (func $builtin_less_than (param f32 f32) (result f32)))"#;
 
-        let special_image_function = if special { r#"
+        let special_image_function = if special {
+            r#"
 (func $special_image_function (param i32 f32 f32 f32 f32 f32)
 ;; Pull destination information onto the stack
     (local $x f32)
@@ -311,9 +339,16 @@ impl CodeAnalysis {
 
 )
 (export "special_image_function" (func $special_image_function))
- "# } else { "" };
+ "#
+        } else {
+            ""
+        };
 
-        let special_imports = if special { r#"(import "env" "memory" (memory (;0;) 17))"# } else { "" };
+        let special_imports = if special {
+            r#"(import "env" "memory" (memory (;0;) 17))"#
+        } else {
+            ""
+        };
 
         let module_text = format!(
             r#"(module
@@ -338,12 +373,14 @@ impl CodeAnalysis {
 )"#
         );
 
+        /*
         let lined_text: String = module_text
             .lines()
             .enumerate()
             .map(|(idx, line)| format!("{:>4}: {:}\n", idx + 1, line))
             .collect();
         eprintln!("{}", lined_text);
+        */
 
         Ok(module_text)
     }

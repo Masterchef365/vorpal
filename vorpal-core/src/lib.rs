@@ -66,7 +66,7 @@ pub struct ExternInputId(String);
 #[derive(Clone, Debug, PartialEq, Eq, Hash)]
 pub struct ExternSamplerId(String);
 
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, PartialEq)]
 pub enum Node {
     ExternInput(ExternInputId, DataType),
     ExternSampler(ExternSamplerId),
