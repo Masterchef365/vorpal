@@ -24,13 +24,54 @@ impl Engine {
     }
 
     pub fn eval(&mut self, node: &Node, ctx: &ExternContext) -> Result<Value> {
-        // Generate code
-let input_list = ctx
+        // Generate input list in random order
+        let input_list = ctx
             .inputs()
             .iter()
             .map(|(name, value)| (name.clone(), value.dtype()))
             .collect::<Vec<(ExternInputId, DataType)>>();
 
+        let mut store = Store::new(&self.wasm_engine, ());
+        let (instance, analysis) = self.compile(node, &mut store, input_list)?;
+        self.exec_instance(&analysis, &instance, &mut store, ctx)
+    }
+
+    pub fn eval_image(&mut self, node: &Node, ctx: &ExternContext) -> Result<Vec<f32>> {
+        const RESOLUTION_KEY: &str = "Resolution (pixels)";
+        const TIME_KEY: &str = "Time (seconds)";
+        const POS_KEY: &str = "Position (pixels)";
+        let res_key = &ExternInputId::new(RESOLUTION_KEY.into());
+        let time_key = &ExternInputId::new(TIME_KEY.into());
+        let pos_key = &ExternInputId::new(POS_KEY.into());
+        let _key = &ExternInputId::new(TIME_KEY.into());
+        let Value::Vec2([width, height]) = ctx.inputs()[&res_key] else { panic!("Wrong vector type") };
+        let Value::Scalar(time) = ctx.inputs()[&time_key] else { panic!("Wrong vector type") };
+        let width = width as u32;
+        let height = height as u32;
+
+        let input_list = vec![
+            // See vorpal-wasm-builtins' special_image_function
+            (res_key.clone(), DataType::Vec2),
+            (pos_key.clone(), DataType::Vec2),
+            (time_key.clone(), DataType::Scalar),
+        ];
+
+        let mut store = Store::new(&self.wasm_engine, ());
+        let (instance, _analysis) = self.compile(node, &mut store, input_list)?;
+
+        let func = instance.get_typed_func::<(u32, u32, f32), u32>(&mut store, "make_image")?;
+
+        let ptr = func.call(&mut store, (width, height, time))?;
+
+        let mem = instance.get_memory(&mut store, "memory").expect("No memory");
+        let mut out_image = vec![0_f32; (width * height * 4) as usize];
+        mem.read(&mut store, ptr as usize, bytemuck::cast_slice_mut(&mut out_image))?;
+
+        Ok(out_image)
+    }
+
+
+    fn compile(&self, node: &Node, mut store: &mut Store<()>, input_list: Vec<(ExternInputId, DataType)>) -> Result<(Instance, CodeAnalysis)> {
         let analysis = CodeAnalysis::new(Rc::new(node.clone()), input_list);
         let wat = analysis.compile_to_wat()?;
 
@@ -40,13 +81,12 @@ let input_list = ctx
             include_bytes!("../../target/wasm32-unknown-unknown/release/vorpal_wasm_builtins.wasm");
         let builtins_module = Module::new(&self.wasm_engine, builtins_wasm)?;
 
-        let mut store = Store::new(&self.wasm_engine, ());
         linker.module(&mut store, "builtins", &builtins_module)?;
 
         //let instance = Instance::new(&mut store, &kernel_module, &[])?;
         let instance = linker.instantiate(&mut store, &kernel_module)?;
 
-        self.exec_instance(&analysis, &instance, &mut store, ctx)
+        Ok((instance, analysis))
     }
 
     fn exec_instance(
@@ -262,10 +302,11 @@ impl CodeAnalysis {
   )
 {special_image_function}
   (export "kernel" (func $kernel))
+  (export "special_image_function" (func $special_image_function))
   (memory (;0;) 16)
   (export "memory" (memory 0))
 )"#
-);
+        );
 
         let lined_text: String = module_text
             .lines()

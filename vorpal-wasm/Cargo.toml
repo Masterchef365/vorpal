@@ -9,3 +9,4 @@ edition = "2021"
 wasm-bridge = { git = "https://github.com/kajacx/wasm-bridge.git", branch = "master" }
 vorpal-core = { path = "../vorpal-core" }
 anyhow = "1"
+bytemuck = "1.14.0"

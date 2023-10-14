@@ -2733,6 +2733,7 @@ name = "vorpal-wasm"
 version = "0.1.0"
 dependencies = [
  "anyhow",
+ "bytemuck",
  "vorpal-core",
  "wasm-bridge",
 ]
