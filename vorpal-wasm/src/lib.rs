@@ -8,10 +8,6 @@ use wasm_bridge::*;
 // * Other datatypes
 // * Longer vectors(?) - go by powers of two; octonions!
 
-pub fn evaluate_node(node: &Node, ctx: &ExternContext) -> Result<Value> {
-    Engine::new()?.eval(&node, ctx)
-}
-
 pub struct Engine {
     wasm_engine: wasm_bridge::Engine,
 }
@@ -32,7 +28,7 @@ impl Engine {
             .collect::<Vec<(ExternInputId, DataType)>>();
 
         let mut store = Store::new(&self.wasm_engine, ());
-        let (instance, analysis) = self.compile(node, &mut store, input_list)?;
+        let (instance, analysis) = self.compile(node, input_list, false)?;
         self.exec_instance(&analysis, &instance, &mut store, ctx)
     }
 
@@ -64,7 +60,7 @@ impl Engine {
         let height = height as u32;
 
         let mut store = Store::new(&self.wasm_engine, ());
-        let (kernel_module, _analysis) = self.compile(node, &mut store, input_list)?;
+        let (kernel_module, _analysis) = self.compile(node, input_list, true)?;
 
         let mut linker = Linker::new(&mut self.wasm_engine);
         linker.module(&mut store, "builtins", &self.builtins_module()?)?;
@@ -103,11 +99,11 @@ impl Engine {
     fn compile(
         &self,
         node: &Node,
-        mut store: &mut Store<()>,
         input_list: Vec<(ExternInputId, DataType)>,
+        special: bool,
     ) -> Result<(Module, CodeAnalysis)> {
         let analysis = CodeAnalysis::new(Rc::new(node.clone()), input_list);
-        let wat = analysis.compile_to_wat()?;
+        let wat = analysis.compile_to_wat(special)?;
         let kernel_module = Module::new(&self.wasm_engine, wat)?;
         Ok((kernel_module, analysis))
     }
@@ -217,7 +213,7 @@ impl CodeAnalysis {
         &self.input_list
     }
 
-    pub fn compile_to_wat(&self) -> Result<String> {
+    pub fn compile_to_wat(&self, special: bool) -> Result<String> {
         // Build parameter list
         let mut input_var_ids = HashSet::new();
         let mut param_list_text = String::new();
@@ -276,7 +272,7 @@ impl CodeAnalysis {
 (import "builtins" "greater_than" (func $builtin_greater_than (param f32 f32) (result f32)))
 (import "builtins" "less_than" (func $builtin_less_than (param f32 f32) (result f32)))"#;
 
-        let special_image_function = r#"
+        let special_image_function = if special { r#"
 (func $special_image_function (param i32 f32 f32 f32 f32 f32)
 ;; Pull destination information onto the stack
     (local $x f32)
@@ -308,8 +304,10 @@ impl CodeAnalysis {
     local.get 0
     local.get $x
     f32.store offset=0
+
 )
- "#;
+(export "special_image_function" (func $special_image_function))
+ "# } else { "" };
 
         let module_text = format!(
             r#"(module
@@ -329,7 +327,6 @@ impl CodeAnalysis {
   )
 {special_image_function}
   (export "kernel" (func $kernel))
-  (export "special_image_function" (func $special_image_function))
   (memory (;0;) 16)
   (export "memory" (memory 0))
 )"#

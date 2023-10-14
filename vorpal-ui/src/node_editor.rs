@@ -557,11 +557,12 @@ impl NodeGraphWidget {
         }
     }
 
-    pub fn eval_output_node(&self) -> anyhow::Result<Value> {
+    pub fn extract_output_node(&mut self) -> Rc<vorpal_core::Node> {
         let node_id = self.state.graph.nodes.iter().find_map(|(id, node)| {
             matches!(node.user_data.template, MyNodeTemplate::Output(_)).then(|| id)
         }).unwrap();
-        evaluate_graph_node(&self.state.graph, node_id, &self.context).map(|NodeGuiValue(val)| val)
+        let extracted = extract_node(&self.state.graph, node_id).unwrap();
+        extracted
     }
 }
 

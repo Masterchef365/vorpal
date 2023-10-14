@@ -5,7 +5,7 @@ use eframe::{
     epaint::{ColorImage, ImageData, ImageDelta, TextureId, Vec2},
 };
 use ndarray::*;
-use vorpal_core::{ndarray, ExternInputId, Value};
+use vorpal_core::{native_backend::evaluate_node, ndarray, ExternInputId, Value};
 
 use crate::node_editor::*;
 
@@ -14,7 +14,7 @@ use crate::node_editor::*;
 pub struct NodeGraphExample {
     nodes: NodeGraphWidget,
     image: ImageViewWidget,
-    data: NdArray<f32>,
+    image_data: NdArray<f32>,
     time: Instant,
 
     use_wasm: bool,
@@ -47,7 +47,7 @@ impl Default for NodeGraphExample {
             time: Instant::now(),
             nodes,
             image: Default::default(),
-            data: NdArray::zeros(vec![100, 100, 3]),
+            image_data: NdArray::zeros(vec![100, 100, 4]),
         }
     }
 }
@@ -87,33 +87,41 @@ impl eframe::App for NodeGraphExample {
     fn update(&mut self, ctx: &egui::Context, _frame: &mut eframe::Frame) {
         ctx.request_repaint();
 
-        let width = self.data.shape()[0];
-        let height = self.data.shape()[1];
+        let width = self.image_data.shape()[0];
+        let height = self.image_data.shape()[1];
 
         self.nodes.context_mut().insert_input(
             &ExternInputId::new(RESOLUTION_KEY.into()),
             Value::Vec2([width as f32, height as f32]),
         );
 
-        for i in 0..width {
-            for j in 0..height {
-                self.nodes.context_mut().insert_input(
-                    &ExternInputId::new(POS_KEY.into()),
-                    Value::Vec2([i as f32, j as f32]),
-                );
+        // Paint image using native backend
+        //if let Ok(Some(node)) = self.nodes.extract_active_node() {
+        let node = self.nodes.extract_output_node();
+        if self.use_wasm {
+            let image_data = self.engine.eval_image(&node, &self.nodes.context).unwrap();
+            self.image_data.data_mut().copy_from_slice(&image_data);
+        } else {
+            for i in 0..width {
+                for j in 0..height {
+                    self.nodes.context_mut().insert_input(
+                        &ExternInputId::new(POS_KEY.into()),
+                        Value::Vec2([i as f32, j as f32]),
+                    );
 
-                let Ok(Value::Vec4(result)) = self.nodes.eval_output_node() else {
-                    panic!("Failed to eval node");
-                };
+                    let Ok(Value::Vec4(result)) = evaluate_node(&node, &self.nodes.context) else {
+                        panic!("Failed to eval node");
+                    };
 
-                for k in 0..self.data.shape()[2] {
-                    self.data[[i, j, k]] = result[k];
+                    for (k, component) in result.into_iter().enumerate() {
+                        self.image_data[[i, j, k]] = component;
+                    }
                 }
             }
         }
 
         self.image
-            .set_image("my image".into(), ctx, array_to_imagedata(&self.data));
+            .set_image("my image".into(), ctx, array_to_imagedata(&self.image_data));
 
         self.nodes.context_mut().insert_input(
             &ExternInputId::new(TIME_KEY.to_string()),
@@ -202,7 +210,7 @@ pub fn array_to_imagedata(array: &ndarray::NdArray<f32>) -> ImageData {
         3,
         "Array must have shape [width, height, 3]"
     );
-    assert_eq!(array.shape()[2], 3, "Image must be RGB");
+    assert_eq!(array.shape()[2], 4, "Image must be RGBA");
     assert!(array.len() > 0);
     let dims = [array.shape()[0], array.shape()[1]];
     let rgb: Vec<u8> = array
@@ -210,5 +218,5 @@ pub fn array_to_imagedata(array: &ndarray::NdArray<f32>) -> ImageData {
         .iter()
         .map(|value| (value.clamp(0., 1.) * 255.0) as u8)
         .collect();
-    ImageData::Color(ColorImage::from_rgb(dims, &rgb))
+    ImageData::Color(ColorImage::from_rgba_unmultiplied(dims, &rgb))
 }
