@@ -252,7 +252,7 @@ impl WidgetValueTrait for NodeGuiValue {
             ui.horizontal(|ui| {
                 for (num, name) in vector.iter_mut().zip(XYZW) {
                     ui.label(name);
-                    ui.add(DragValue::new(num));
+                    ui.add(DragValue::new(num).speed(1e-2));
                 }
             });
         };
