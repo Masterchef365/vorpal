@@ -47,7 +47,7 @@ impl Default for NodeGraphExample {
             time: Instant::now(),
             nodes,
             image: Default::default(),
-            image_data: NdArray::zeros(vec![100, 100, 4]),
+            image_data: NdArray::zeros(vec![500, 500, 4]),
         }
     }
 }
