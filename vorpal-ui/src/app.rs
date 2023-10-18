@@ -99,7 +99,7 @@ impl eframe::App for NodeGraphExample {
         //if let Ok(Some(node)) = self.nodes.extract_active_node() {
         let node = self.nodes.extract_output_node();
         if self.use_wasm {
-            let image_data = self.engine.eval_image(&node, &self.nodes.context).unwrap();
+            let image_data = self.engine.eval_image(&node, self.nodes.context()).unwrap();
             self.image_data.data_mut().copy_from_slice(&image_data);
         } else {
             for i in 0..width {
@@ -109,7 +109,7 @@ impl eframe::App for NodeGraphExample {
                         Value::Vec2([i as f32, j as f32]),
                     );
 
-                    let Ok(Value::Vec4(result)) = evaluate_node(&node, &self.nodes.context) else {
+                    let Ok(Value::Vec4(result)) = evaluate_node(&node, self.nodes.context()) else {
                         panic!("Failed to eval node");
                     };
 
@@ -148,9 +148,9 @@ impl eframe::App for NodeGraphExample {
             let text = match maybe_node {
                 Ok(Some(node)) => {
                     let result = match self.use_wasm {
-                        true => self.engine.eval(&node, &self.nodes.context),
+                        true => self.engine.eval(&node, self.nodes.context()),
                         false => {
-                            vorpal_core::native_backend::evaluate_node(&node, &self.nodes.context)
+                            vorpal_core::native_backend::evaluate_node(&node, self.nodes.context())
                                 .map_err(|e| e.into())
                         }
                     };

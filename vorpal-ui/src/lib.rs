@@ -3,6 +3,7 @@
 #![warn(clippy::all, rust_2018_idioms)]
 
 pub mod node_editor;
+pub use node_editor::NodeGraphWidget;
 
 // ----------------------------------------------------------------------------
 // When compiling for web:

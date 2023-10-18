@@ -6,16 +6,16 @@ use std::{
 
 const XYZW: [&str; 4] = ["x", "y", "z", "w"];
 
-use eframe::egui::{self, ComboBox, DragValue, TextStyle, Ui};
+use eframe::egui::{self, ComboBox, DragValue, Ui};
 use egui_node_graph::*;
 use vorpal_core::*;
 
+/// Widget allowing the user to interactively design 
+/// a function using a node and connection paradigm
 pub struct NodeGraphWidget {
-    // The `GraphEditorState` is the top-level object. You "register" all your
-    // custom types by specifying it as its generic parameters.
-    pub context: ExternContext,
+    context: ExternContext,
     state: MyEditorState,
-    pub user_state: MyGraphState,
+    user_state: MyGraphState,
 }
 
 pub type MyGraph = Graph<MyNodeData, DataType, NodeGuiValue>;
@@ -492,6 +492,33 @@ impl Default for NodeGuiValue {
 }
 
 impl NodeGraphWidget {
+    /// Create a new nodegraph widget with the given input list
+    pub fn new(context: ExternContext) -> Self {
+        let mut state: MyEditorState = MyEditorState::default();
+        let mut user_state: MyGraphState = Default::default();
+
+        let output = MyNodeTemplate::Output(DataType::Vec4);
+
+        let template = output.clone();
+        let id = state
+            .graph
+            .add_node("Output".into(), MyNodeData { template }, |_, _| ());
+
+        state.node_positions.insert(id, egui::Pos2::ZERO);
+        state.node_order.push(id);
+        MyNodeTemplate::Output(DataType::Vec4).build_node(&mut state.graph, &mut user_state, id);
+
+        Self {
+            context,
+            state,
+            user_state,
+        }
+    }
+
+    pub fn context(&self) -> &ExternContext {
+        &self.context
+    }
+
     pub fn context_mut(&mut self) -> &mut ExternContext {
         &mut self.context
     }
@@ -575,24 +602,6 @@ fn undo_if_cycle(input_id: InputId, graph: &mut MyGraph) {
 
 impl Default for NodeGraphWidget {
     fn default() -> Self {
-        let mut state: MyEditorState = MyEditorState::default();
-        let mut user_state: MyGraphState = Default::default();
-
-        let output = MyNodeTemplate::Output(DataType::Vec4);
-
-        let template = output.clone();
-        let id = state
-            .graph
-            .add_node("Output".into(), MyNodeData { template }, |_, _| ());
-
-        state.node_positions.insert(id, egui::Pos2::ZERO);
-        state.node_order.push(id);
-        MyNodeTemplate::Output(DataType::Vec4).build_node(&mut state.graph, &mut user_state, id);
-
-        Self {
-            context: Default::default(),
-            state,
-            user_state,
-        }
+        Self::new(Default::default())
     }
 }
