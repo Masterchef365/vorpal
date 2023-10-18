@@ -10,7 +10,7 @@ use eframe::egui::{self, ComboBox, DragValue, Ui};
 use egui_node_graph::*;
 use vorpal_core::*;
 
-/// Widget allowing the user to interactively design 
+/// Widget allowing the user to interactively design
 /// a function using a node and connection paradigm
 pub struct NodeGraphWidget {
     context: ExternContext,
@@ -439,12 +439,10 @@ fn extract_node_recursive(
             Rc::new(vorpal_core::Node::ExternInput(name.clone(), *dtype))
         }
         MyNodeTemplate::Output(_dtype) => get_input_node(graph, node_id, "x", cache)?,
-        MyNodeTemplate::Dot(_dtype) => {
-            Rc::new(vorpal_core::Node::Dot(
-                get_input_node(graph, node_id, "x", cache)?,
-                get_input_node(graph, node_id, "y", cache)?,
-            ))
-        }
+        MyNodeTemplate::Dot(_dtype) => Rc::new(vorpal_core::Node::Dot(
+            get_input_node(graph, node_id, "x", cache)?,
+            get_input_node(graph, node_id, "y", cache)?,
+        )),
     })
 }
 
@@ -456,10 +454,12 @@ pub fn evaluate_graph_node(
     node_id: NodeId,
     context: &ExternContext,
 ) -> anyhow::Result<NodeGuiValue> {
-    Ok(NodeGuiValue(crate::node_editor::native_backend::evaluate_node(
-        &*extract_node(graph, node_id)?,
-        context,
-    )?))
+    Ok(NodeGuiValue(
+        crate::node_editor::native_backend::evaluate_node(
+            &*extract_node(graph, node_id)?,
+            context,
+        )?,
+    ))
 }
 
 fn get_input_node(
@@ -562,8 +562,6 @@ impl NodeGraphWidget {
                 }
             }
         }
-
-        
     }
 
     pub fn extract_active_node(&mut self) -> anyhow::Result<Option<Rc<vorpal_core::Node>>> {
@@ -585,9 +583,15 @@ impl NodeGraphWidget {
     }
 
     pub fn extract_output_node(&mut self) -> Rc<vorpal_core::Node> {
-        let node_id = self.state.graph.nodes.iter().find_map(|(id, node)| {
-            matches!(node.user_data.template, MyNodeTemplate::Output(_)).then(|| id)
-        }).unwrap();
+        let node_id = self
+            .state
+            .graph
+            .nodes
+            .iter()
+            .find_map(|(id, node)| {
+                matches!(node.user_data.template, MyNodeTemplate::Output(_)).then(|| id)
+            })
+            .unwrap();
         let extracted = extract_node(&self.state.graph, node_id).unwrap();
         extracted
     }

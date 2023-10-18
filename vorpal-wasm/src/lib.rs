@@ -8,6 +8,11 @@ use wasm_bridge::*;
 // * Other datatypes
 // * Longer vectors(?) - go by powers of two; octonions!
 
+pub fn evaluate_node(node: &Node, ctx: &ExternContext) -> Result<Value> {
+    let mut engine = Engine::new().unwrap();
+    engine.eval(node, ctx)
+}
+
 pub struct Engine {
     wasm_engine: wasm_bridge::Engine,
     cache: Option<CachedCompilation>,

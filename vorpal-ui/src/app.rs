@@ -220,7 +220,10 @@ pub fn array_to_imagedata(array: &ndarray::NdArray<f32>) -> ImageData {
         .collect();
 
     // Set alpha to one. TODO: UNDO THIS!!
-    rgba.iter_mut().skip(3).step_by(4).for_each(|v| *v = u8::MAX);
+    rgba.iter_mut()
+        .skip(3)
+        .step_by(4)
+        .for_each(|v| *v = u8::MAX);
 
     ImageData::Color(ColorImage::from_rgba_unmultiplied(dims, &rgba))
 }

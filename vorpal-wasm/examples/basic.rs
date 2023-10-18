@@ -1,6 +1,6 @@
 use std::rc::Rc;
 
-use vorpal_core::{ComponentFn, ComponentInfixOp, DataType, ExternContext, ExternInputId, Value};
+use vorpal_core::{ComponentFn, ComponentInfixOp, ExternContext, ExternInputId, Value};
 use vorpal_wasm::evaluate_node;
 
 fn main() {
