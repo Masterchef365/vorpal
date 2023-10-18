@@ -2,7 +2,8 @@
 #![cfg_attr(not(debug_assertions), deny(warnings))] // Forbid warnings in release builds
 #![warn(clippy::all, rust_2018_idioms)]
 
-use vorpal_ui::NodeGraphExample;
+mod app;
+pub use app::NodeGraphExample;
 
 // When compiling natively:
 #[cfg(not(target_arch = "wasm32"))]

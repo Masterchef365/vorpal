@@ -2,9 +2,7 @@
 //#![cfg_attr(not(debug_assertions), deny(warnings))] // Forbid warnings in release builds
 #![warn(clippy::all, rust_2018_idioms)]
 
-mod app;
-mod node_editor;
-pub use app::NodeGraphExample;
+pub mod node_editor;
 
 // ----------------------------------------------------------------------------
 // When compiling for web:

@@ -2,12 +2,12 @@ use std::time::Instant;
 
 use eframe::{
     egui::{self, TextStyle, TextureOptions, Ui},
-    epaint::{ColorImage, ImageData, ImageDelta, TextureId, Vec2},
+    epaint::{ColorImage, ImageData, ImageDelta, TextureId},
 };
 use ndarray::*;
 use vorpal_core::{native_backend::evaluate_node, ndarray, ExternInputId, Value};
 
-use crate::node_editor::*;
+use vorpal_ui::node_editor::*;
 
 // ========= First, define your user data types =============
 
