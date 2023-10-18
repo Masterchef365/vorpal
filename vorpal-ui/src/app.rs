@@ -8,6 +8,7 @@ use ndarray::*;
 use vorpal_core::{native_backend::evaluate_node, ndarray, ExternInputId, Value};
 
 use vorpal_ui::node_editor::*;
+use vorpal_wasm::wasmtime_integration::Engine;
 
 // ========= First, define your user data types =============
 
@@ -18,7 +19,7 @@ pub struct NodeGraphExample {
     time: Instant,
 
     use_wasm: bool,
-    engine: vorpal_wasm::Engine,
+    engine: Engine,
 }
 
 const TIME_KEY: &str = "Time (seconds)";
@@ -42,7 +43,7 @@ impl Default for NodeGraphExample {
         );
 
         Self {
-            engine: vorpal_wasm::Engine::new().unwrap(),
+            engine: Engine::new().unwrap(),
             use_wasm: true,
             time: Instant::now(),
             nodes,

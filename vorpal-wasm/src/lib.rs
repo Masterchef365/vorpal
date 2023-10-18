@@ -1,216 +1,18 @@
 use anyhow::Result;
 use std::fmt::Write;
 use vorpal_core::*;
-use wasm_bridge::*;
+use std::rc::Rc;
+use std::collections::{HashMap, HashSet};
+use std::hash::{Hash, Hasher};
 
-// TODO:
-// Change Value to something like VectorValue<T, const N: usize>([T; N]);
-// * Other datatypes
-// * Longer vectors(?) - go by powers of two; octonions!
-
-pub fn evaluate_node(node: &Node, ctx: &ExternContext) -> Result<Value> {
-    let mut engine = Engine::new().unwrap();
-    engine.eval(node, ctx)
-}
-
-pub struct Engine {
-    wasm_engine: wasm_bridge::Engine,
-    cache: Option<CachedCompilation>,
-}
-
-struct CachedCompilation {
-    node: Node,
-    instance: Instance,
-    store: Store<()>,
-    mem: Memory,
-}
-
-impl Engine {
-    pub fn new() -> Result<Self> {
-        Ok(Self {
-            wasm_engine: wasm_bridge::Engine::new(&Default::default())?,
-            cache: None,
-        })
-    }
-
-    pub fn eval(&mut self, node: &Node, ctx: &ExternContext) -> Result<Value> {
-        // Generate input list in random order
-        let input_list = ctx
-            .inputs()
-            .iter()
-            .map(|(name, value)| (name.clone(), value.dtype()))
-            .collect::<Vec<(ExternInputId, DataType)>>();
-
-        let mut store = Store::new(&self.wasm_engine, ());
-        let (instance, analysis) = self.compile(node, input_list, false)?;
-        self.exec_instance(&analysis, &instance, &mut store, ctx)
-    }
-
-    pub fn eval_image(&mut self, node: &Node, ctx: &ExternContext) -> Result<Vec<f32>> {
-        // Assembly input list
-        const RESOLUTION_KEY: &str = "Resolution (pixels)";
-        const TIME_KEY: &str = "Time (seconds)";
-        const POS_KEY: &str = "Position (pixels)";
-
-        let res_key = &ExternInputId::new(RESOLUTION_KEY.into());
-        let time_key = &ExternInputId::new(TIME_KEY.into());
-        let pos_key = &ExternInputId::new(POS_KEY.into());
-
-        let input_list = vec![
-            // See vorpal-wasm-builtins' special_image_function
-            (res_key.clone(), DataType::Vec2),
-            (pos_key.clone(), DataType::Vec2),
-            (time_key.clone(), DataType::Scalar),
-        ];
-
-        let Value::Vec2([width, height]) = ctx.inputs()[&res_key] else {
-            panic!("Wrong vector type")
-        };
-        let Value::Scalar(time) = ctx.inputs()[&time_key] else {
-            panic!("Wrong vector type")
-        };
-        let width = width as u32;
-        let height = height as u32;
-
-        let mut compile_data: CachedCompilation = self
-            .cache
-            .take()
-            .filter(|cache| &cache.node == node)
-            .map(|cache| Ok(cache))
-            .unwrap_or_else(|| -> anyhow::Result<CachedCompilation> {
-                let mut store = Store::new(&self.wasm_engine, ());
-                let (kernel_module, _analysis) = self.compile(node, input_list, true)?;
-
-                let mut linker = Linker::new(&mut self.wasm_engine);
-
-                let memory_ty = MemoryType::new(100, None);
-                let mem = Memory::new(&mut store, memory_ty)?;
-                linker.define(&store, "env", "memory", mem)?;
-
-                linker.module(&mut store, "builtins", &self.builtins_module()?)?;
-                linker.module(&mut store, "kernel", &kernel_module)?;
-
-                let instance = linker.instantiate(&mut store, &self.image_module()?)?;
-
-                Ok(CachedCompilation {
-                    node: node.clone(),
-                    instance,
-                    store,
-                    mem,
-                })
-            })?;
-
-        let func = compile_data
-            .instance
-            .get_typed_func::<(u32, u32, f32), u32>(&mut compile_data.store, "make_image")?;
-
-        let ptr = func.call(&mut compile_data.store, (width, height, time))?;
-
-        let mut out_image = vec![0_f32; (width * height * 4) as usize];
-        compile_data.mem.read(
-            &mut compile_data.store,
-            ptr as usize,
-            bytemuck::cast_slice_mut(&mut out_image),
-        )?;
-
-        self.cache = Some(compile_data);
-
-        //dbg!(&out_image);
-
-        Ok(out_image)
-    }
-
-    fn builtins_module(&self) -> Result<Module> {
-        let builtins_wasm =
-            include_bytes!("../../target/wasm32-unknown-unknown/release/vorpal_wasm_builtins.wasm");
-        Ok(Module::new(&self.wasm_engine, builtins_wasm)?)
-    }
-
-    fn image_module(&self) -> Result<Module> {
-        let builtins_wasm =
-            include_bytes!("../../target/wasm32-unknown-unknown/release/vorpal_image.wasm");
-        Ok(Module::new(&self.wasm_engine, builtins_wasm)?)
-    }
-
-    fn compile(
-        &self,
-        node: &Node,
-        input_list: Vec<(ExternInputId, DataType)>,
-        special: bool,
-    ) -> Result<(Module, CodeAnalysis)> {
-        let analysis = CodeAnalysis::new(Rc::new(node.clone()), input_list);
-        let wat = analysis.compile_to_wat(special)?;
-        let kernel_module = Module::new(&self.wasm_engine, wat)?;
-        Ok((kernel_module, analysis))
-    }
-
-    fn exec_instance(
-        &mut self,
-        analysis: &CodeAnalysis,
-        kernel_module: &Module,
-        mut store: &mut Store<()>,
-        ctx: &ExternContext,
-    ) -> Result<Value> {
-        let mut linker = Linker::new(&mut self.wasm_engine);
-        linker.module(&mut store, "builtins", &self.builtins_module()?)?;
-        let instance = linker.instantiate(&mut store, &kernel_module)?;
-
-        let kernel = instance
-            .get_func(&mut store, "kernel")
-            .ok_or_else(|| anyhow::format_err!("Kernel function not found"))?;
-
-        // Create parameter list
-        let mut params = vec![];
-        for (name, _dtype) in analysis.input_list() {
-            let input_val = ctx.inputs()[name];
-            params.extend(
-                input_val
-                    .iter_vector_floats()
-                    .map(|f| Val::F32(f.to_bits())),
-            );
-        }
-
-        // Create output list
-        let mut results = vec![];
-        let output_dtype = analysis.final_output_dtype();
-        results.extend((0..output_dtype.n_lanes()).map(|_| Val::F32(0_f32.to_bits())));
-
-        // Call the function
-        kernel.call(&mut store, &params, &mut results)?;
-
-        // Unwind the results
-        Ok(match output_dtype {
-            DataType::Scalar => Value::Scalar(results[0].f32().unwrap()),
-            DataType::Vec2 => {
-                let mut val = [0.; 2];
-                val.iter_mut()
-                    .zip(&results)
-                    .for_each(|(v, res)| *v = res.f32().unwrap());
-                Value::Vec2(val)
-            }
-            DataType::Vec3 => {
-                let mut val = [0.; 3];
-                val.iter_mut()
-                    .zip(&results)
-                    .for_each(|(v, res)| *v = res.f32().unwrap());
-                Value::Vec3(val)
-            }
-            DataType::Vec4 => {
-                let mut val = [0.; 4];
-                val.iter_mut()
-                    .zip(&results)
-                    .for_each(|(v, res)| *v = res.f32().unwrap());
-                Value::Vec4(val)
-            }
-        })
-    }
-}
+#[cfg(feature = "wasmtime")]
+pub mod wasmtime_integration;
 
 /// Denotes the "name" of a local variable; e.g. local.get 9
 type LocalVarId = u32;
 
 /// Metadata for a node graph
-struct CodeAnalysis {
+pub struct CodeAnalysis {
     /// Mapping of a node to its corresponding local variable id
     locals: HashMap<HashRcByPtr<Node>, (LocalVarId, DataType)>,
     /// Mapping of an input name to its corresponding local variable id
@@ -224,7 +26,8 @@ struct CodeAnalysis {
 }
 
 impl CodeAnalysis {
-    fn new(node: Rc<Node>, input_list: Vec<(ExternInputId, DataType)>) -> Self {
+    /// Inputs to the function will be arranged in the given order
+    pub fn new(node: Rc<Node>, input_list: Vec<(ExternInputId, DataType)>) -> Self {
         let root = HashRcByPtr(node);
 
         let mut instance = Self {
@@ -240,15 +43,18 @@ impl CodeAnalysis {
         instance
     }
 
+    /// Output datatype of the root node
     pub fn final_output_dtype(&self) -> DataType {
         let (_, final_output_dtype) = self.locals[&self.root];
         final_output_dtype
     }
 
+    /// Get the input list passed to use at creation
     pub fn input_list(&self) -> &[(ExternInputId, DataType)] {
         &self.input_list
     }
 
+    /// Compile this analysis to webassembly
     pub fn compile_to_wat(&self, special: bool) -> Result<String> {
         // Build parameter list
         let mut input_var_ids = HashSet::new();
@@ -390,6 +196,7 @@ impl CodeAnalysis {
         Ok(module_text)
     }
 
+    /// A first pass which finds all local variables and inputs which are used
     fn find_inputs_and_locals_recursive(&mut self, node_hash: HashRcByPtr<Node>) -> DataType {
         if let Some((_number, dtype)) = self.locals.get(&node_hash) {
             return *dtype;
@@ -441,12 +248,16 @@ impl CodeAnalysis {
         dtype
     }
 
+    /// Generate a new local variable ID
     fn gen_var_id(&mut self) -> LocalVarId {
         let ret = self.next_var_id;
         self.next_var_id += 1;
         ret
     }
 
+
+    // Explore the graph left-hand-side-first, so that inputs are computed before outputs
+    // Meanwhile assemble functions as we go
     fn compile_to_wat_recursive(
         &self,
         node: &HashRcByPtr<Node>,
@@ -618,10 +429,9 @@ impl CodeAnalysis {
     }
 }
 
-use std::collections::{HashMap, HashSet};
-use std::hash::{Hash, Hasher};
-use std::rc::Rc;
-
+/// Instead of hashing by the _contents_ of an Rc smart pointer,
+/// we are hashing by its pointer. This makes it such that we can store
+/// a hashmap containing nodes in a graph.
 #[derive(Clone, Default)]
 struct HashRcByPtr<T>(pub Rc<T>);
 
@@ -638,3 +448,4 @@ impl<T> PartialEq for HashRcByPtr<T> {
         Rc::as_ptr(&self.0).eq(&Rc::as_ptr(&other.0))
     }
 }
+
