@@ -7,7 +7,7 @@ use eframe::{
 use ndarray::*;
 use vorpal_core::{native_backend::evaluate_node, ndarray, ExternInputId, Value};
 
-use vorpal_ui::node_editor::*;
+use vorpal_widgets::*;
 use vorpal_wasm::wasmtime_integration::Engine;
 
 // ========= First, define your user data types =============

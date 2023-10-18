@@ -6,4 +6,5 @@ members = [
     "vorpal-wasm",
     "vorpal-wasm-builtins",
     "vorpal-image",
+    "vorpal-widgets",
 ]

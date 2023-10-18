@@ -1,0 +1,17 @@
+[package]
+name = "vorpal-widgets"
+version = "0.1.0"
+edition = "2021"
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[dependencies]
+egui = "0.22"
+vorpal-core = { path = "../vorpal-core" }
+egui_node_graph = { git = "https://github.com/Masterchef365/egui_node_graph.git", branch = "unique_slotmaps" }
+serde = { version = "1.0", optional = true }
+anyhow = "1.0"
+
+[features]
+default = []
+persistence = ["serde", "egui_node_graph/persistence"]

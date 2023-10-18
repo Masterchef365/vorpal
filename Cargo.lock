@@ -2726,10 +2726,10 @@ version = "0.1.0"
 dependencies = [
  "anyhow",
  "eframe",
- "egui_node_graph",
  "serde",
  "vorpal-core",
  "vorpal-wasm",
+ "vorpal-widgets",
 ]
 
 [[package]]
@@ -2745,6 +2745,17 @@ dependencies = [
 [[package]]
 name = "vorpal-wasm-builtins"
 version = "0.1.0"
+
+[[package]]
+name = "vorpal-widgets"
+version = "0.1.0"
+dependencies = [
+ "anyhow",
+ "egui",
+ "egui_node_graph",
+ "serde",
+ "vorpal-core",
+]
 
 [[package]]
 name = "waker-fn"

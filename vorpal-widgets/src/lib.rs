@@ -6,7 +6,7 @@ use std::{
 
 const XYZW: [&str; 4] = ["x", "y", "z", "w"];
 
-use eframe::egui::{self, ComboBox, DragValue, Ui};
+use egui::{self, ComboBox, DragValue, Ui};
 use egui_node_graph::*;
 use vorpal_core::*;
 
@@ -455,7 +455,7 @@ pub fn evaluate_graph_node(
     context: &ExternContext,
 ) -> anyhow::Result<NodeGuiValue> {
     Ok(NodeGuiValue(
-        crate::node_editor::native_backend::evaluate_node(
+        vorpal_core::native_backend::evaluate_node(
             &*extract_node(graph, node_id)?,
             context,
         )?,

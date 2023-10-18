@@ -10,12 +10,12 @@ crate-type = ["cdylib", "rlib"]
 
 [dependencies]
 eframe = "0.22"
-egui_node_graph = { git = "https://github.com/Masterchef365/egui_node_graph.git", branch = "unique_slotmaps" }
 vorpal-core = { path = "../vorpal-core" }
 vorpal-wasm = { path = "../vorpal-wasm" }
+vorpal-widgets = { path = "../vorpal-widgets" }
 anyhow = "1.0"
 serde = { version = "1.0", optional = true }
 
 [features]
 default = []
-persistence = ["serde", "egui_node_graph/persistence", "eframe/persistence"]
+persistence = ["serde", "vorpal-widgets/persistence", "eframe/persistence"]
