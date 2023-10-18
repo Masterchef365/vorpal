@@ -18,27 +18,27 @@ pub struct NodeGraphWidget {
     user_state: MyGraphState,
 }
 
-pub type MyGraph = Graph<MyNodeData, DataType, NodeGuiValue>;
-pub type MyEditorState =
+type MyGraph = Graph<MyNodeData, DataType, NodeGuiValue>;
+type MyEditorState =
     GraphEditorState<MyNodeData, DataType, NodeGuiValue, MyNodeTemplate, MyGraphState>;
 
 /// The NodeData holds a custom data struct inside each node. It's useful to
 /// store additional information that doesn't live in parameters. For this
 /// example, the node data stores the template (i.e. the "type") of the node.
 #[cfg_attr(feature = "persistence", derive(serde::Serialize, serde::Deserialize))]
-pub struct MyNodeData {
-    pub template: MyNodeTemplate,
+struct MyNodeData {
+    template: MyNodeTemplate,
 }
 
 #[derive(Copy, Clone, Debug)]
-pub struct NodeGuiValue(pub Value);
+struct NodeGuiValue(Value);
 
 /// NodeTemplate is a mechanism to define node templates. It's what the graph
 /// will display in the "new node" popup. The user code needs to tell the
 /// library how to convert a NodeTemplate into a Node.
 #[derive(Clone)]
 #[cfg_attr(feature = "persistence", derive(serde::Serialize, serde::Deserialize))]
-pub enum MyNodeTemplate {
+enum MyNodeTemplate {
     Input(ExternInputId, DataType),
     Make(DataType),
     ComponentInfixOp(ComponentInfixOp, DataType),
@@ -53,7 +53,7 @@ pub enum MyNodeTemplate {
 /// nodes, handling connections...) are already handled by the library, but this
 /// mechanism allows creating additional side effects from user code.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
-pub enum MyResponse {
+enum MyResponse {
     SetActiveNode(NodeId),
     ClearActiveNode,
     SetComponentInfixOp(NodeId, ComponentInfixOp),
@@ -65,8 +65,8 @@ pub enum MyResponse {
 /// the user. For this example, we use it to keep track of the 'active' node.
 #[derive(Default)]
 #[cfg_attr(feature = "persistence", derive(serde::Serialize, serde::Deserialize))]
-pub struct MyGraphState {
-    pub active_node: Option<NodeId>,
+struct MyGraphState {
+    active_node: Option<NodeId>,
 }
 
 // =========== Then, you need to implement some traits ============
@@ -200,7 +200,7 @@ impl NodeTemplateTrait for MyNodeTemplate {
     }
 }
 
-pub struct AllMyNodeTemplates<'ctx> {
+struct AllMyNodeTemplates<'ctx> {
     ctx: &'ctx ExternContext,
 }
 
@@ -367,7 +367,7 @@ impl NodeDataTrait for MyNodeData {
 }
 
 /// Detects whether there is a cycle in determining the output of the given node
-pub fn detect_cycle(graph: &MyGraph, node_id: NodeId) -> bool {
+fn detect_cycle(graph: &MyGraph, node_id: NodeId) -> bool {
     detect_cycle_recursive(graph, node_id, &mut HashSet::new())
 }
 
@@ -393,12 +393,12 @@ fn detect_cycle_recursive(graph: &MyGraph, node_id: NodeId, stack: &mut HashSet<
     false
 }
 
-pub fn extract_node(graph: &MyGraph, node_id: NodeId) -> anyhow::Result<Rc<vorpal_core::Node>> {
-    extract_node_recursive(graph, node_id, &mut OutputsCache::new())
+fn extract_node_from_graph(graph: &MyGraph, node_id: NodeId) -> anyhow::Result<Rc<vorpal_core::Node>> {
+    extract_node_from_graph_recursive(graph, node_id, &mut OutputsCache::new())
 }
 
 // Returns the ID of the vorpal_core::Node corresponding to given parameter of the node "node_id"
-fn extract_node_recursive(
+fn extract_node_from_graph_recursive(
     graph: &MyGraph,
     node_id: NodeId,
     cache: &mut OutputsCache,
@@ -448,20 +448,6 @@ fn extract_node_recursive(
 
 type OutputsCache = HashMap<OutputId, Rc<vorpal_core::Node>>;
 
-/// Recursively evaluates all dependencies of this node, then evaluates the node itself.
-pub fn evaluate_graph_node(
-    graph: &MyGraph,
-    node_id: NodeId,
-    context: &ExternContext,
-) -> anyhow::Result<NodeGuiValue> {
-    Ok(NodeGuiValue(
-        vorpal_core::native_backend::evaluate_node(
-            &*extract_node(graph, node_id)?,
-            context,
-        )?,
-    ))
-}
-
 fn get_input_node(
     graph: &MyGraph,
     node_id: NodeId,
@@ -472,7 +458,7 @@ fn get_input_node(
 
     // The output of another node is connected.
     if let Some(other_output_id) = graph.connection(input_id) {
-        let node = extract_node_recursive(graph, graph[other_output_id].node, cache)?;
+        let node = extract_node_from_graph_recursive(graph, graph[other_output_id].node, cache)?;
         cache.insert(other_output_id, node.clone());
         Ok(node)
     }
@@ -570,7 +556,7 @@ impl NodeGraphWidget {
                 if detect_cycle(&self.state.graph, node) {
                     Err(anyhow::format_err!("Cycle detected"))
                 } else {
-                    let extracted = extract_node(&self.state.graph, node).unwrap();
+                    let extracted = extract_node_from_graph(&self.state.graph, node).unwrap();
                     Ok(Some(extracted))
                 }
             } else {
@@ -592,7 +578,7 @@ impl NodeGraphWidget {
                 matches!(node.user_data.template, MyNodeTemplate::Output(_)).then(|| id)
             })
             .unwrap();
-        let extracted = extract_node(&self.state.graph, node_id).unwrap();
+        let extracted = extract_node_from_graph(&self.state.graph, node_id).unwrap();
         extracted
     }
 }
