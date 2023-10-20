@@ -85,17 +85,24 @@ impl Engine {
             .map(|cache| Ok(cache))
             .unwrap_or_else(|| -> anyhow::Result<CachedCompilation> {
                 let mut store = Store::new(&self.wasm_engine, ());
+
+                // Compile code
                 let (kernel_module, anal) = self.compile(node, input_list)?;
 
+                // Start linking modules
                 let mut linker = Linker::new(&mut self.wasm_engine);
 
+                // Create a memory which all modules know to import
                 let memory_ty = MemoryType::new(100, None);
                 let mem = Memory::new(&mut store, memory_ty)?;
+                // Gleaned from compiling Rust to WAST and adding the 
+                // `rustflags = ["-C", "link-args=--import-memory"]`
+                // to .cargo/config.toml
                 linker.define(&store, "env", "memory", mem)?;
 
+                // Add modules
                 linker.module(&mut store, "builtins", &self.builtins_module()?)?;
                 linker.module(&mut store, "kernel", &kernel_module)?;
-
                 let instance = linker.instantiate(&mut store, &self.image_module()?)?;
 
                 Ok(CachedCompilation {
