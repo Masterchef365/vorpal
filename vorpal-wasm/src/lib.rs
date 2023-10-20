@@ -12,7 +12,7 @@ pub mod wasmtime_integration;
 type LocalVarId = u32;
 
 pub enum InputParameter {
-    ExternalVariable(ExternSamplerId, DataType),
+    ExternalVariable(ExternInputId, DataType),
     OutputPointer(LocalVarId),
 }
 
@@ -74,29 +74,24 @@ impl CodeAnalysis {
         for input_param in &self.input_list {
             match input_param {
                 InputParameter::OutputPointer(input_var_id) => {
+                    // Pointer for output float data (*mut f32)
                     write!(&mut param_list_text, "(param ${input_var_id} i32) ").unwrap();
                 }
                 InputParameter::ExternalVariable(input_name, input_dtype) => {
                     for lane in "xyzw".chars().take(input_dtype.n_lanes()) {
                         if let Some((input_var_id, expected_dtype)) = self.input_to_var.get(input_name) {
+                            // External input parameter
                             assert_eq!(expected_dtype, input_dtype);
                             write!(&mut param_list_text, "(param ${input_var_id}_{lane} f32) ").unwrap();
                             input_var_ids.insert(input_var_id);
                         } else {
-                            // Dummy parameter
+                            // Dummy parameter to keep the ordering of the inputs
                             write!(&mut param_list_text, "(param f32) ").unwrap();
                         }
                     }
                 }
             }
         }
-
-        // Build result list
-        let mut result_list_text = "(result ".to_string();
-        for _ in 0..self.final_output_dtype().n_lanes() {
-            result_list_text += "f32 ";
-        }
-        result_list_text += ")";
 
         // Build local list
         let mut locals_text = String::new();
@@ -115,11 +110,15 @@ impl CodeAnalysis {
         let mut function_body_text = String::new();
         self.compile_to_wat_recursive(&self.root, &mut function_body_text, &mut HashSet::new());
 
-        // Build output stack
+        // Write to output pointer
         let mut output_stack_text = String::new();
         let (var_id, _) = self.locals[&self.root];
-        for lane in self.final_output_dtype().lane_names() {
+        let InputParameter::OutputPointer(output_ptr_id) = self.input_list[0] else { unreachable!() };
+        for (idx, lane) in self.final_output_dtype().lane_names().enumerate() {
+            let offset = idx * 4; // f32 is 4 bytes
+            writeln!(&mut output_stack_text, "local.get ${output_ptr_id}").unwrap();
             writeln!(&mut output_stack_text, "local.get ${var_id}_{lane}").unwrap();
+            writeln!(&mut output_stack_text, "f32.store offset={offset}").unwrap();
         }
 
         let builtin_imports = r#"(import "builtins" "sine" (func $builtin_sine (param f32) (result f32)))
@@ -141,7 +140,7 @@ impl CodeAnalysis {
 {builtin_imports}
 
 ;; == Function declaration ==
-  (func $kernel {param_list_text} {result_list_text}
+  (func $kernel {param_list_text}
 
 ;; Local variables
 {locals_text}

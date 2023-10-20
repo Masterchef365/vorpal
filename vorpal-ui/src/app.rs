@@ -148,13 +148,18 @@ impl eframe::App for NodeGraphExample {
 
             let text = match maybe_node {
                 Ok(Some(node)) => {
+                    /*
                     let result = match self.use_wasm {
                         true => self.engine.eval(&node, self.nodes.context()),
                         false => {
-                            vorpal_core::native_backend::evaluate_node(&node, self.nodes.context())
+                    */
+                    let result = 
+                            vorpal_core::native_backend::evaluate_node(&node, self.nodes.context());
+                    /*
                                 .map_err(|e| e.into())
                         }
                     };
+                    */
 
                     match result {
                         Err(e) => format!("Error: {:?}", e),
