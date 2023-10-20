@@ -282,7 +282,7 @@ fn compile_to_wat_recursive(
                 writeln!(text, "local.get ${index_id}_x ;;").unwrap();
                 writeln!(text, "f32.floor").unwrap();
                 writeln!(text, "f32.const {}.0", i).unwrap();
-                writeln!(text, "f32.gt").unwrap();
+                writeln!(text, "f32.ge").unwrap();
                 // Then set the output to this value
                 writeln!(text, "select").unwrap();
             }
