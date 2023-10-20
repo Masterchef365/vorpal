@@ -1,18 +1,20 @@
+use crate::CodeAnalysis;
 use anyhow::Result;
+use std::rc::Rc;
 use vorpal_core::*;
 use wasm_bridge::*;
-use crate::CodeAnalysis;
-use std::rc::Rc;
 
 // TODO:
 // Change Value to something like VectorValue<T, const N: usize>([T; N]);
 // * Other datatypes
 // * Longer vectors(?) - go by powers of two; octonions!
 
+/*
 pub fn evaluate_node(node: &Node, ctx: &ExternContext) -> Result<Value> {
     let mut engine = Engine::new().unwrap();
     engine.eval(node, ctx)
 }
+*/
 
 pub struct Engine {
     wasm_engine: wasm_bridge::Engine,
@@ -34,6 +36,7 @@ impl Engine {
         })
     }
 
+    /*
     pub fn eval(&mut self, node: &Node, ctx: &ExternContext) -> Result<Value> {
         // Generate input list in random order
         let input_list = ctx
@@ -43,9 +46,10 @@ impl Engine {
             .collect::<Vec<(ExternInputId, DataType)>>();
 
         let mut store = Store::new(&self.wasm_engine, ());
-        let (instance, analysis) = self.compile(node, input_list, false)?;
+        let (instance, analysis) = self.compile(node, input_list)?;
         self.exec_instance(&analysis, &instance, &mut store, ctx)
     }
+    */
 
     pub fn eval_image(&mut self, node: &Node, ctx: &ExternContext) -> Result<Vec<f32>> {
         // Assembly input list
@@ -80,7 +84,7 @@ impl Engine {
             .map(|cache| Ok(cache))
             .unwrap_or_else(|| -> anyhow::Result<CachedCompilation> {
                 let mut store = Store::new(&self.wasm_engine, ());
-                let (kernel_module, _analysis) = self.compile(node, input_list, true)?;
+                let (kernel_module, _analysis) = self.compile(node, input_list)?;
 
                 let mut linker = Linker::new(&mut self.wasm_engine);
 
@@ -137,14 +141,14 @@ impl Engine {
         &self,
         node: &Node,
         input_list: Vec<(ExternInputId, DataType)>,
-        special: bool,
     ) -> Result<(Module, CodeAnalysis)> {
         let analysis = CodeAnalysis::new(Rc::new(node.clone()), input_list);
-        let wat = analysis.compile_to_wat(special)?;
+        let wat = analysis.compile_to_wat()?;
         let kernel_module = Module::new(&self.wasm_engine, wat)?;
         Ok((kernel_module, analysis))
     }
 
+    /*
     fn exec_instance(
         &mut self,
         analysis: &CodeAnalysis,
@@ -205,4 +209,5 @@ impl Engine {
             }
         })
     }
+    */
 }
