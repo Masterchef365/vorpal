@@ -18,14 +18,15 @@ pub fn evaluate_node(node: &Node, ctx: &ExternContext) -> Result<Value> {
 
 pub struct Engine {
     wasm_engine: wasm_bridge::Engine,
-    cache: Option<CachedCompilation>,
+    pub cache: Option<CachedCompilation>,
 }
 
-struct CachedCompilation {
-    node: Node,
-    instance: Instance,
-    store: Store<()>,
-    mem: Memory,
+pub struct CachedCompilation {
+    pub node: Node,
+    pub instance: Instance,
+    pub store: Store<()>,
+    pub mem: Memory,
+    pub anal: CodeAnalysis,
 }
 
 impl Engine {
@@ -84,7 +85,7 @@ impl Engine {
             .map(|cache| Ok(cache))
             .unwrap_or_else(|| -> anyhow::Result<CachedCompilation> {
                 let mut store = Store::new(&self.wasm_engine, ());
-                let (kernel_module, _analysis) = self.compile(node, input_list)?;
+                let (kernel_module, anal) = self.compile(node, input_list)?;
 
                 let mut linker = Linker::new(&mut self.wasm_engine);
 
@@ -102,6 +103,7 @@ impl Engine {
                     instance,
                     store,
                     mem,
+                    anal,
                 })
             })?;
 

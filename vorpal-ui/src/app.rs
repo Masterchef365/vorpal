@@ -1,14 +1,14 @@
 use std::time::Instant;
 
 use eframe::{
-    egui::{self, TextStyle, TextureOptions, Ui},
+    egui::{self, ScrollArea, TextStyle, TextureOptions, Ui},
     epaint::{ColorImage, ImageData, ImageDelta, TextureId},
 };
 use ndarray::*;
 use vorpal_core::{native_backend::evaluate_node, ndarray, ExternInputId, Value};
 
-use vorpal_widgets::*;
 use vorpal_wasm::wasmtime_integration::Engine;
+use vorpal_widgets::*;
 
 // ========= First, define your user data types =============
 
@@ -153,8 +153,8 @@ impl eframe::App for NodeGraphExample {
                         true => self.engine.eval(&node, self.nodes.context()),
                         false => {
                     */
-                    let result = 
-                            vorpal_core::native_backend::evaluate_node(&node, self.nodes.context());
+                    let result =
+                        vorpal_core::native_backend::evaluate_node(&node, self.nodes.context());
                     /*
                                 .map_err(|e| e.into())
                         }
@@ -169,6 +169,13 @@ impl eframe::App for NodeGraphExample {
                 Ok(None) => format!("No node selected"),
                 Err(err) => format!("Execution error: {}", err),
             };
+
+            if let Some(cache) = self.engine.cache.as_ref() {
+                ScrollArea::vertical().show(ui, |ui| {
+                    let text = cache.anal.compile_to_wat().unwrap();
+                    ui.label(&text);
+                });
+            }
 
             ui.ctx().debug_painter().text(
                 egui::pos2(10.0, 35.0),
