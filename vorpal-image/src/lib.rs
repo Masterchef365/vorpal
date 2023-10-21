@@ -18,21 +18,42 @@ fn call_image_fn(width: f32, height: f32, x: f32, y: f32, time: f32) -> [f32; 4]
 #[no_mangle]
 pub extern "C" fn make_image(width: u32, height: u32, time: f32) -> *const f32 {
     thread_local! {
-        static BUFFER: RefCell<Vec<f32>> = RefCell::new(Vec::new());
+        static BUFFER: RefCell<Option<Plugin>> = RefCell::new(None);
     }
 
     BUFFER.with(|buffer| {
-        let mut image = buffer.borrow_mut();
-        *image = vec![0_f32; (width * height * 4) as usize];
-        for y in 0..height {
-            for x in 0..width {
-                let rgba = call_image_fn(width as f32, height as f32, x as f32, y as f32, time);
+        let mut maybe_plugin = buffer.borrow_mut();
+        let plugin = maybe_plugin.get_or_insert_with(|| Plugin::new(width, height));
 
-                let base = (x * 4 + y * width * 4) as usize;
-                image[base..base + 4].copy_from_slice(&rgba);
+        plugin.get_image(time).as_ptr()
+    })
+}
+
+struct Plugin {
+    out_rgba: Vec<f32>,
+    out_width: u32,
+    out_height: u32,
+}
+
+impl Plugin {
+    pub fn new(out_width: u32, out_height: u32) -> Self {
+        Self {
+            out_rgba: vec![0_f32; (out_width * out_height * 4) as usize],
+            out_width,
+            out_height,
+        }
+    }
+
+    pub fn get_image(&mut self, time: f32) -> &[f32] {
+        for y in 0..self.out_height {
+            for x in 0..self.out_width {
+                let rgba = call_image_fn(self.out_width as f32, self.out_height as f32, x as f32, y as f32, time);
+
+                let base = (x * 4 + y * self.out_width * 4) as usize;
+                self.out_rgba[base..base + 4].copy_from_slice(&rgba);
             }
         }
 
-        image.as_ptr()
-    })
+        &self.out_rgba
+    }
 }
