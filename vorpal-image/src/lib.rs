@@ -64,16 +64,19 @@ impl Plugin {
     }
 
     pub fn get_image(&mut self, time: f32) -> &[f32] {
-        // Draw smoke and push fluid
-        let d = self.smoke_sim.smoke_mut();
-        let center = (d.width() / 2, d.height() / 2);
-
-        let (u, v) = self.fluid_sim.uv_mut();
-
-        let pos = center;
-        //let time = 3. * PI / 2.;
-        u[pos] = -450. * (time).cos();
-        v[pos] = -450. * (time).sin();
+        let (w, h) = (self.fluid_sim.width(), self.fluid_sim.height());
+        for y in 0..h {
+            for x in 0..w {
+                let (u, v) = self.fluid_sim.uv_mut();
+                let u_val = u[(x, y)];
+                let v_val = v[(x, y)];
+                let [add_u, add_v, add_smoke, _] =
+                    call_kernel(u_val, v_val, x as f32 / w as f32, y as f32 / h as f32, time);
+                self.smoke_sim.smoke_mut()[(x, y)] += add_smoke;
+                u[(x, y)] += add_u;
+                v[(x, y)] += add_v;
+            }
+        }
 
         // Move fluid and smoke
         let dt = 1e-2;
