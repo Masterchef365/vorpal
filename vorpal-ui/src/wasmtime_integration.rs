@@ -4,6 +4,8 @@ use vorpal_core::*;
 use vorpal_wasm::CodeAnalysis;
 use wasm_bridge::*;
 
+use crate::file_watcher::FileWatcher;
+
 // TODO:
 // Change Value to something like VectorValue<T, const N: usize>([T; N]);
 // * Other datatypes
@@ -17,11 +19,12 @@ pub fn evaluate_node(node: &Node, ctx: &ExternContext) -> Result<Value> {
 */
 
 const VORPAL_IMAGE_PATH: &str = "./target/wasm32-unknown-unknown/release/vorpal_image.wasm";
-const UPDATE_RATE: f32 = 100.0; // Seconds
 
 pub struct Engine {
     wasm_engine: wasm_bridge::Engine,
     pub cache: Option<CachedCompilation>,
+    watcher: FileWatcher,
+    cached_image_wasm: Vec<u8>,
 }
 
 pub struct CachedCompilation {
@@ -30,14 +33,15 @@ pub struct CachedCompilation {
     pub store: Store<()>,
     pub mem: Memory,
     pub anal: CodeAnalysis,
-    pub timer: Instant,
 }
 
 impl Engine {
     pub fn new() -> Result<Self> {
         Ok(Self {
             wasm_engine: wasm_bridge::Engine::new(&Default::default())?,
+            watcher: FileWatcher::new(VORPAL_IMAGE_PATH.into())?,
             cache: None,
+            cached_image_wasm: vec![],
         })
     }
 
@@ -80,8 +84,8 @@ impl Engine {
         let mut compile_data: CachedCompilation = self
             .cache
             .take()
+            .filter(|_| !self.watcher.changed())
             .filter(|cache| &cache.node == node)
-            .filter(|cache| cache.timer.elapsed().as_secs_f32() < UPDATE_RATE)
             .map(|cache| Ok(cache))
             .unwrap_or_else(|| -> anyhow::Result<CachedCompilation> {
                 let mut store = Store::new(&self.wasm_engine, ());
@@ -111,7 +115,6 @@ impl Engine {
                     store,
                     mem,
                     anal,
-                    timer: Instant::now(),
                 })
             })?;
 
@@ -139,10 +142,13 @@ impl Engine {
         Ok(Module::new(&self.wasm_engine, vorpal_wasm::BUILTINS_WASM)?)
     }
 
-    fn image_module(&self) -> Result<Module> {
+    fn image_module(&mut self) -> Result<Module> {
         //let wasm = std::fs::read(VORPAL_IMAGE_PATH)?;
-        let wasm = include_bytes!("../../target/wasm32-unknown-unknown/release/vorpal_image.wasm");
-        Module::new(&self.wasm_engine, wasm)
+        if self.cached_image_wasm.is_empty() || dbg!(self.watcher.changed()) {
+            self.cached_image_wasm = std::fs::read(self.watcher.path())?;
+            self.watcher.reset();
+        }
+        Module::new(&self.wasm_engine, &self.cached_image_wasm)
     }
 
     fn compile(

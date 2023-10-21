@@ -17,6 +17,7 @@ wasm-bridge = { git = "https://github.com/kajacx/wasm-bridge.git", branch = "mas
 anyhow = "1.0"
 serde = { version = "1.0", optional = true }
 bytemuck = "1.14.0"
+notify = "6.1.1"
 
 [features]
 default = []

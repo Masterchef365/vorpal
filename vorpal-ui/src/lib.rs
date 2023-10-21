@@ -5,6 +5,7 @@
 // ----------------------------------------------------------------------------
 // When compiling for web:
 pub mod wasmtime_integration;
+pub mod file_watcher;
 
 pub const TIME_KEY: &str = "Time (seconds)";
 pub const POS_KEY: &str = "Position (pixels)";
