@@ -3,12 +3,6 @@ name = "vorpal-wasm"
 version = "0.1.0"
 edition = "2021"
 
-[features]
-default = []
-wasmtime = ["wasm-bridge"]
-
 [dependencies]
-wasm-bridge = { git = "https://github.com/kajacx/wasm-bridge.git", branch = "master", optional = true }
 vorpal-core = { path = "../vorpal-core" }
 anyhow = "1"
-bytemuck = "1.14.0"

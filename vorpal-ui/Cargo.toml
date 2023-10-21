@@ -11,10 +11,12 @@ crate-type = ["cdylib", "rlib"]
 [dependencies]
 eframe = "0.22"
 vorpal-core = { path = "../vorpal-core" }
-vorpal-wasm = { path = "../vorpal-wasm", features = ["wasmtime"] }
+vorpal-wasm = { path = "../vorpal-wasm" }
 vorpal-widgets = { path = "../vorpal-widgets" }
+wasm-bridge = { git = "https://github.com/kajacx/wasm-bridge.git", branch = "master" }
 anyhow = "1.0"
 serde = { version = "1.0", optional = true }
+bytemuck = "1.14.0"
 
 [features]
 default = []

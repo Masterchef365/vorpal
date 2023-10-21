@@ -5,9 +5,6 @@ use std::rc::Rc;
 use std::collections::{HashMap, HashSet};
 use std::hash::{Hash, Hasher};
 
-#[cfg(feature = "wasmtime")]
-pub mod wasmtime_integration;
-
 /// Denotes the "name" of a local variable; e.g. local.get 9
 type LocalVarId = u32;
 

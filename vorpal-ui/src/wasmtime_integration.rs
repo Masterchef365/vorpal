@@ -1,4 +1,4 @@
-use crate::CodeAnalysis;
+use vorpal_wasm::CodeAnalysis;
 use anyhow::Result;
 use std::rc::Rc;
 use vorpal_core::*;

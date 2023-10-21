@@ -2721,11 +2721,13 @@ name = "vorpal-ui"
 version = "0.1.0"
 dependencies = [
  "anyhow",
+ "bytemuck",
  "eframe",
  "serde",
  "vorpal-core",
  "vorpal-wasm",
  "vorpal-widgets",
+ "wasm-bridge",
 ]
 
 [[package]]
@@ -2733,9 +2735,7 @@ name = "vorpal-wasm"
 version = "0.1.0"
 dependencies = [
  "anyhow",
- "bytemuck",
  "vorpal-core",
- "wasm-bridge",
 ]
 
 [[package]]
