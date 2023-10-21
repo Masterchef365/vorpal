@@ -141,7 +141,6 @@ impl Engine {
 
     fn image_module(&self) -> Result<Module> {
         let wasm = std::fs::read(VORPAL_IMAGE_PATH)?;
-        eprintln!("LOAD {}", wasm.len());
         Module::new(&self.wasm_engine, wasm)
     }
 
