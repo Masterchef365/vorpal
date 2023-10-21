@@ -10,7 +10,7 @@ extern "C" {
     fn kernel(ptr: *mut f32, width: f32, height: f32, x: f32, y: f32, time: f32);
 }
 
-fn call_image_fn(width: f32, height: f32, x: f32, y: f32, time: f32) -> [f32; 4] {
+pub fn call_kernel(width: f32, height: f32, x: f32, y: f32, time: f32) -> [f32; 4] {
     let mut out_data = [0_f32; 4];
 
     unsafe {
