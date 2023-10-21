@@ -130,9 +130,7 @@ impl Engine {
     }
 
     fn builtins_module(&self) -> Result<Module> {
-        let builtins_wasm =
-            include_bytes!("../../target/wasm32-unknown-unknown/release/vorpal_wasm_builtins.wasm");
-        Ok(Module::new(&self.wasm_engine, builtins_wasm)?)
+        Ok(Module::new(&self.wasm_engine, vorpal_wasm::BUILTINS_WASM)?)
     }
 
     fn image_module(&self) -> Result<Module> {
