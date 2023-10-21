@@ -53,14 +53,9 @@ impl Engine {
     */
 
     pub fn eval_image(&mut self, node: &Node, ctx: &ExternContext) -> Result<Vec<f32>> {
-        // Assembly input list
-        const RESOLUTION_KEY: &str = "Resolution (pixels)";
-        const TIME_KEY: &str = "Time (seconds)";
-        const POS_KEY: &str = "Position (pixels)";
-
-        let res_key = &ExternInputId::new(RESOLUTION_KEY.into());
-        let time_key = &ExternInputId::new(TIME_KEY.into());
-        let pos_key = &ExternInputId::new(POS_KEY.into());
+        let res_key = &ExternInputId::new(crate::RESOLUTION_KEY.into());
+        let time_key = &ExternInputId::new(crate::TIME_KEY.into());
+        let pos_key = &ExternInputId::new(crate::POS_KEY.into());
 
         let input_list = vec![
             // See vorpal-wasm-builtins' special_image_function

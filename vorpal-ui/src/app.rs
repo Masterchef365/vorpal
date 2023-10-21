@@ -22,23 +22,19 @@ pub struct NodeGraphExample {
     engine: Engine,
 }
 
-const TIME_KEY: &str = "Time (seconds)";
-const POS_KEY: &str = "Position (pixels)";
-const RESOLUTION_KEY: &str = "Resolution (pixels)";
-
 impl Default for NodeGraphExample {
     fn default() -> Self {
         let mut nodes = NodeGraphWidget::default();
         nodes.context_mut().insert_input(
-            &ExternInputId::new(TIME_KEY.to_string()),
+            &ExternInputId::new(vorpal_ui::TIME_KEY.to_string()),
             Value::Scalar(0.1),
         );
         nodes.context_mut().insert_input(
-            &ExternInputId::new(POS_KEY.to_string()),
+            &ExternInputId::new(vorpal_ui::POS_KEY.to_string()),
             Value::Vec2([0.; 2]),
         );
         nodes.context_mut().insert_input(
-            &ExternInputId::new(RESOLUTION_KEY.to_string()),
+            &ExternInputId::new(vorpal_ui::RESOLUTION_KEY.to_string()),
             Value::Vec2([1.; 2]),
         );
 
@@ -92,7 +88,7 @@ impl eframe::App for NodeGraphExample {
         let height = self.image_data.shape()[1];
 
         self.nodes.context_mut().insert_input(
-            &ExternInputId::new(RESOLUTION_KEY.into()),
+            &ExternInputId::new(vorpal_ui::RESOLUTION_KEY.into()),
             Value::Vec2([width as f32, height as f32]),
         );
 
@@ -106,7 +102,7 @@ impl eframe::App for NodeGraphExample {
             for i in 0..width {
                 for j in 0..height {
                     self.nodes.context_mut().insert_input(
-                        &ExternInputId::new(POS_KEY.into()),
+                        &ExternInputId::new(vorpal_ui::POS_KEY.into()),
                         Value::Vec2([i as f32, j as f32]),
                     );
 
@@ -125,7 +121,7 @@ impl eframe::App for NodeGraphExample {
             .set_image("my image".into(), ctx, array_to_imagedata(&self.image_data));
 
         self.nodes.context_mut().insert_input(
-            &ExternInputId::new(TIME_KEY.to_string()),
+            &ExternInputId::new(vorpal_ui::TIME_KEY.to_string()),
             Value::Scalar(self.time.elapsed().as_secs_f32()),
         );
 
