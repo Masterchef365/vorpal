@@ -17,7 +17,7 @@ pub fn evaluate_node(node: &Node, ctx: &ExternContext) -> Result<Value> {
 */
 
 const VORPAL_IMAGE_PATH: &str = "./target/wasm32-unknown-unknown/release/vorpal_image.wasm";
-const UPDATE_RATE: f32 = 1.0; // Seconds
+const UPDATE_RATE: f32 = 100.0; // Seconds
 
 pub struct Engine {
     wasm_engine: wasm_bridge::Engine,
@@ -140,7 +140,8 @@ impl Engine {
     }
 
     fn image_module(&self) -> Result<Module> {
-        let wasm = std::fs::read(VORPAL_IMAGE_PATH)?;
+        //let wasm = std::fs::read(VORPAL_IMAGE_PATH)?;
+        let wasm = include_bytes!("../../target/wasm32-unknown-unknown/release/vorpal_image.wasm");
         Module::new(&self.wasm_engine, wasm)
     }
 
