@@ -305,6 +305,7 @@ impl NodeDataTrait for MyNodeData {
             MyNodeTemplate::ComponentFn(mut func, _dtype) => {
                 let mut updated = false;
                 ComboBox::new(node_id, "Function")
+                    .width(ui.style().spacing.slider_width)
                     .selected_text(func.to_string())
                     .show_ui(ui, |ui| {
                         for val in ComponentFn::all() {
@@ -322,6 +323,7 @@ impl NodeDataTrait for MyNodeData {
             MyNodeTemplate::ComponentInfixOp(mut infix, _dtype) => {
                 let mut updated = false;
                 ComboBox::new(node_id, "Operation")
+                    .width(ui.style().spacing.slider_width)
                     .selected_text(infix.to_string())
                     .show_ui(ui, |ui| {
                         for val in ComponentInfixOp::all() {
