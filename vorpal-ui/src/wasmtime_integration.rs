@@ -1,7 +1,7 @@
-use vorpal_wasm::CodeAnalysis;
 use anyhow::Result;
-use std::rc::Rc;
+use std::{cell::RefCell, rc::Rc, time::Instant};
 use vorpal_core::*;
+use vorpal_wasm::CodeAnalysis;
 use wasm_bridge::*;
 
 // TODO:
@@ -16,6 +16,9 @@ pub fn evaluate_node(node: &Node, ctx: &ExternContext) -> Result<Value> {
 }
 */
 
+const VORPAL_IMAGE_PATH: &str = "./target/wasm32-unknown-unknown/release/vorpal_image.wasm";
+const UPDATE_RATE: f32 = 1.0; // Seconds
+
 pub struct Engine {
     wasm_engine: wasm_bridge::Engine,
     pub cache: Option<CachedCompilation>,
@@ -27,6 +30,7 @@ pub struct CachedCompilation {
     pub store: Store<()>,
     pub mem: Memory,
     pub anal: CodeAnalysis,
+    pub timer: Instant,
 }
 
 impl Engine {
@@ -77,6 +81,7 @@ impl Engine {
             .cache
             .take()
             .filter(|cache| &cache.node == node)
+            .filter(|cache| cache.timer.elapsed().as_secs_f32() < UPDATE_RATE)
             .map(|cache| Ok(cache))
             .unwrap_or_else(|| -> anyhow::Result<CachedCompilation> {
                 let mut store = Store::new(&self.wasm_engine, ());
@@ -90,7 +95,7 @@ impl Engine {
                 // Create a memory which all modules know to import
                 let memory_ty = MemoryType::new(100, None);
                 let mem = Memory::new(&mut store, memory_ty)?;
-                // Gleaned from compiling Rust to WAST and adding the 
+                // Gleaned from compiling Rust to WAST and adding the
                 // `rustflags = ["-C", "link-args=--import-memory"]`
                 // to .cargo/config.toml
                 linker.define(&store, "env", "memory", mem)?;
@@ -106,6 +111,7 @@ impl Engine {
                     store,
                     mem,
                     anal,
+                    timer: Instant::now(),
                 })
             })?;
 
@@ -134,9 +140,9 @@ impl Engine {
     }
 
     fn image_module(&self) -> Result<Module> {
-        let builtins_wasm =
-            include_bytes!("../../target/wasm32-unknown-unknown/release/vorpal_image.wasm");
-        Ok(Module::new(&self.wasm_engine, builtins_wasm)?)
+        let wasm = std::fs::read(VORPAL_IMAGE_PATH)?;
+        eprintln!("LOAD {}", wasm.len());
+        Module::new(&self.wasm_engine, wasm)
     }
 
     fn compile(
