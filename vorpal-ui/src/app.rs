@@ -96,8 +96,19 @@ impl eframe::App for NodeGraphExample {
         //if let Ok(Some(node)) = self.nodes.extract_active_node() {
         let node = self.nodes.extract_output_node();
         if self.use_wasm {
-            let image_data = self.engine.eval_image(&node, self.nodes.context()).unwrap();
-            self.image_data.data_mut().copy_from_slice(&image_data);
+            match self.engine.eval_image(&node, self.nodes.context()) {
+                Ok(image_data) => {
+                    self.image_data.data_mut().copy_from_slice(&image_data);
+                }
+                Err(e) => {
+                    eprintln!("Error {:#}", e);
+                    self.image_data
+                        .data_mut()
+                        .iter_mut()
+                        .zip([1., 0., 0., 0.].into_iter().cycle())
+                        .for_each(|(o, i)| *o = i);
+                }
+            }
         } else {
             for i in 0..width {
                 for j in 0..height {
