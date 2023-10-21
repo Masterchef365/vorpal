@@ -144,7 +144,7 @@ impl Engine {
 
     fn image_module(&mut self) -> Result<Module> {
         //let wasm = std::fs::read(VORPAL_IMAGE_PATH)?;
-        if self.cached_image_wasm.is_empty() || dbg!(self.watcher.changed()) {
+        if self.cached_image_wasm.is_empty() || self.watcher.changed() {
             self.cached_image_wasm = std::fs::read(self.watcher.path())?;
             self.watcher.reset();
         }
