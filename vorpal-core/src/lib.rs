@@ -10,6 +10,7 @@ pub type Vec2 = [f32; 2];
 pub type Vec3 = [f32; 3];
 pub type Vec4 = [f32; 4];
 
+#[cfg_attr(feature = "persistence", derive(serde::Serialize, serde::Deserialize))]
 #[derive(PartialEq, Eq, Clone, Copy, Debug)]
 pub enum DataType {
     Scalar,
@@ -18,6 +19,7 @@ pub enum DataType {
     Vec4,
 }
 
+#[cfg_attr(feature = "persistence", derive(serde::Serialize, serde::Deserialize))]
 #[derive(Copy, Clone, Debug, PartialEq)]
 pub enum Value {
     Scalar(Scalar),
@@ -27,6 +29,7 @@ pub enum Value {
 }
 
 /// Componentwise infix operation
+#[cfg_attr(feature = "persistence", derive(serde::Serialize, serde::Deserialize))]
 #[derive(Copy, Clone, Debug, PartialEq, Eq)]
 pub enum ComponentInfixOp {
     Add,
@@ -40,6 +43,7 @@ pub enum ComponentInfixOp {
 }
 
 /// Function on components
+#[cfg_attr(feature = "persistence", derive(serde::Serialize, serde::Deserialize))]
 #[derive(Copy, Clone, Debug, PartialEq, Eq)]
 pub enum ComponentFn {
     Cosine,
@@ -59,13 +63,16 @@ pub enum EvalError {
 }
 
 /// Unique name of external value input
+#[cfg_attr(feature = "persistence", derive(serde::Serialize, serde::Deserialize))]
 #[derive(Clone, Debug, PartialEq, Eq, Hash)]
 pub struct ExternInputId(String);
 
 /// Unique name of external sampler input
+#[cfg_attr(feature = "persistence", derive(serde::Serialize, serde::Deserialize))]
 #[derive(Clone, Debug, PartialEq, Eq, Hash)]
 pub struct ExternSamplerId(String);
 
+#[cfg_attr(feature = "persistence", derive(serde::Serialize, serde::Deserialize))]
 #[derive(Clone, Debug, PartialEq)]
 pub enum Node {
     ExternInput(ExternInputId, DataType),
@@ -79,8 +86,10 @@ pub enum Node {
 }
 
 /// Sampler(A, B, C), samples ndarray A with a coordinate of vector B and returns vector C
+#[cfg_attr(feature = "persistence", derive(serde::Serialize, serde::Deserialize))]
 pub struct Sampler(NdArray<f32>, DataType, DataType);
 
+#[cfg_attr(feature = "persistence", derive(serde::Serialize, serde::Deserialize))]
 #[derive(Default)]
 pub struct ExternContext {
     pub inputs: HashMap<ExternInputId, Value>,

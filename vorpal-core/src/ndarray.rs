@@ -1,5 +1,6 @@
 use std::ops::{Index, IndexMut};
 
+#[cfg_attr(feature = "persistence", derive(serde::Serialize, serde::Deserialize))]
 pub struct NdArray<T> {
     dims: Vec<usize>,
     data: Vec<T>,

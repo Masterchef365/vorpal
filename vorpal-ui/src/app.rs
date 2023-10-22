@@ -15,9 +15,10 @@ use vorpal_widgets::*;
 pub struct NodeGraphExample {
     nodes: NodeGraphWidget,
     image: ImageViewWidget,
-    image_data: NdArray<f32>,
-    time: Instant,
 
+    image_data: NdArray<f32>,
+
+    time: Instant,
     use_wasm: bool,
     engine: Engine,
 }
@@ -57,14 +58,18 @@ impl NodeGraphExample {
     /// If the persistence feature is enabled, Called once before the first frame.
     /// Load previous app state (if any).
     pub fn new(cc: &eframe::CreationContext<'_>) -> Self {
-        let state = cc
+        let state: NodeGraphWidget = cc
             .storage
             .and_then(|storage| eframe::get_value(storage, PERSISTENCE_KEY))
             .unwrap_or_default();
-        Self {
-            state,
-            user_state: MyGraphState::default(),
-        }
+
+        let mut inst = Self::default();
+
+        inst.nodes = state;
+        dbg!(inst.nodes.context().inputs());
+
+        inst
+        //Self::default()
     }
 }
 
@@ -77,7 +82,8 @@ impl eframe::App for NodeGraphExample {
     /// If the persistence function is enabled,
     /// Called by the frame work to save state before shutdown.
     fn save(&mut self, storage: &mut dyn eframe::Storage) {
-        eframe::set_value(storage, PERSISTENCE_KEY, &self.state);
+        dbg!(self.nodes.context().inputs());
+        eframe::set_value(storage, PERSISTENCE_KEY, &self.nodes);
     }
     /// Called each time the UI needs repainting, which may be many times per second.
     /// Put your widgets into a `SidePanel`, `TopPanel`, `CentralPanel`, `Window` or `Area`.

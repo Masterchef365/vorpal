@@ -12,6 +12,7 @@ use vorpal_core::*;
 
 /// Widget allowing the user to interactively design
 /// a function using a node and connection paradigm
+#[cfg_attr(feature = "persistence", derive(serde::Serialize, serde::Deserialize))]
 pub struct NodeGraphWidget {
     context: ExternContext,
     state: MyEditorState,
@@ -30,6 +31,7 @@ struct MyNodeData {
     template: MyNodeTemplate,
 }
 
+#[cfg_attr(feature = "persistence", derive(serde::Serialize, serde::Deserialize))]
 #[derive(Copy, Clone, Debug)]
 struct NodeGuiValue(Value);
 

@@ -8,10 +8,11 @@ edition = "2021"
 [dependencies]
 egui = "0.22"
 vorpal-core = { path = "../vorpal-core" }
-egui_node_graph = { git = "https://github.com/Masterchef365/egui_node_graph.git", branch = "unique_slotmaps" }
+#egui_node_graph = { git = "https://github.com/Masterchef365/egui_node_graph.git", branch = "unique_slotmaps" }
+egui_node_graph = { path = "../../egui_node_graph/egui_node_graph" }
 serde = { version = "1.0", optional = true }
 anyhow = "1.0"
 
 [features]
-default = []
+default = ["persistence"]
 persistence = ["serde", "egui_node_graph/persistence"]

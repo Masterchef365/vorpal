@@ -78,6 +78,7 @@ impl Engine {
         let Value::Scalar(time) = ctx.inputs()[&time_key] else {
             panic!("Wrong vector type")
         };
+
         let width = width as u32;
         let height = height as u32;
 
