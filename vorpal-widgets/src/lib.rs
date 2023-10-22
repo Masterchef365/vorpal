@@ -20,27 +20,27 @@ pub struct NodeGraphWidget {
 }
 
 type MyGraph = Graph<MyNodeData, DataType, NodeGuiValue>;
-type MyEditorState =
+pub type MyEditorState =
     GraphEditorState<MyNodeData, DataType, NodeGuiValue, MyNodeTemplate, MyGraphState>;
 
 /// The NodeData holds a custom data struct inside each node. It's useful to
 /// store additional information that doesn't live in parameters. For this
 /// example, the node data stores the template (i.e. the "type") of the node.
 #[cfg_attr(feature = "persistence", derive(serde::Serialize, serde::Deserialize))]
-struct MyNodeData {
+pub struct MyNodeData {
     template: MyNodeTemplate,
 }
 
 #[cfg_attr(feature = "persistence", derive(serde::Serialize, serde::Deserialize))]
 #[derive(Copy, Clone, Debug)]
-struct NodeGuiValue(Value);
+pub struct NodeGuiValue(Value);
 
 /// NodeTemplate is a mechanism to define node templates. It's what the graph
 /// will display in the "new node" popup. The user code needs to tell the
 /// library how to convert a NodeTemplate into a Node.
 #[derive(Clone)]
 #[cfg_attr(feature = "persistence", derive(serde::Serialize, serde::Deserialize))]
-enum MyNodeTemplate {
+pub enum MyNodeTemplate {
     Input(ExternInputId, DataType),
     Make(DataType),
     ComponentInfixOp(ComponentInfixOp, DataType),
@@ -55,7 +55,7 @@ enum MyNodeTemplate {
 /// nodes, handling connections...) are already handled by the library, but this
 /// mechanism allows creating additional side effects from user code.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
-enum MyResponse {
+pub enum MyResponse {
     SetActiveNode(NodeId),
     ClearActiveNode,
     SetComponentInfixOp(NodeId, ComponentInfixOp),
@@ -67,7 +67,7 @@ enum MyResponse {
 /// the user. For this example, we use it to keep track of the 'active' node.
 #[derive(Default)]
 #[cfg_attr(feature = "persistence", derive(serde::Serialize, serde::Deserialize))]
-struct MyGraphState {
+pub struct MyGraphState {
     active_node: Option<NodeId>,
 }
 
@@ -503,6 +503,14 @@ impl NodeGraphWidget {
             state,
             user_state,
         }
+    }
+
+    pub fn state(&self) -> &MyEditorState {
+        &self.state
+    }
+
+    pub fn set_state(&mut self, state: MyEditorState) {
+        self.state = state;
     }
 
     pub fn context(&self) -> &ExternContext {

@@ -3023,6 +3023,7 @@ dependencies = [
  "notify",
  "rfd",
  "serde",
+ "serde_json",
  "vorpal-core",
  "vorpal-wasm",
  "vorpal-widgets",

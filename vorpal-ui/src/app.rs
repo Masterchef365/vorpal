@@ -19,9 +19,13 @@ pub struct VorpalApp {
     image_data: NdArray<f32>,
 
     time: Instant,
+
+    autosave_timer: Instant,
     use_wasm: bool,
     engine: Engine,
 }
+
+const AUTOSAVE_INTERVAL_SECS: f32 = 3.0;
 
 impl Default for VorpalApp {
     fn default() -> Self {
@@ -43,6 +47,7 @@ impl Default for VorpalApp {
             engine: Engine::new().unwrap(),
             use_wasm: true,
             time: Instant::now(),
+            autosave_timer: Instant::now(),
             nodes,
             image: Default::default(),
             image_data: NdArray::zeros(vec![100, 100, 4]),
@@ -77,12 +82,22 @@ impl eframe::App for VorpalApp {
     /// If the persistence function is enabled,
     /// Called by the frame work to save state before shutdown.
     fn save(&mut self, storage: &mut dyn eframe::Storage) {
-        dbg!(self.nodes.context().inputs());
         eframe::set_value(storage, PERSISTENCE_KEY, &self.nodes);
     }
+
     /// Called each time the UI needs repainting, which may be many times per second.
     /// Put your widgets into a `SidePanel`, `TopPanel`, `CentralPanel`, `Window` or `Area`.
-    fn update(&mut self, ctx: &egui::Context, _frame: &mut eframe::Frame) {
+    fn update(&mut self, ctx: &egui::Context, frame: &mut eframe::Frame) {
+        if self.autosave_timer.elapsed().as_secs_f32() > AUTOSAVE_INTERVAL_SECS {
+            self.autosave_timer = Instant::now();
+
+            if let Some(storage) = frame.storage_mut() {
+                self.save(storage);
+                storage.flush();
+                eprintln!("Autosave successful");
+            }
+        }
+
         ctx.request_repaint();
 
         let width = self.image_data.shape()[0];
@@ -144,6 +159,15 @@ impl eframe::App for VorpalApp {
                     if ui.button("Save .wat").clicked() {
                         self.save_wat_file();
                     }
+                    if ui.button("Save .vor").clicked() {
+                        self.save_vor_file();
+                    }
+                    if ui.button("Load .vor").clicked() {
+                        self.load_vor_file();
+                    }
+                    if ui.button("Load defaults").clicked() {
+                        *self = Self::default();
+                    }
                 });
             });
         });
@@ -203,10 +227,42 @@ impl VorpalApp {
     fn save_wat_file(&self) {
         if let Some(cache) = self.engine.cache.as_ref() {
             if let Ok(wat) = cache.anal.compile_to_wat() {
-
+                if let Some(path) = rfd::FileDialog::new()
+                    .set_title("Save .wat file")
+                    .set_file_name("project.wat")
+                    .save_file()
+                {
+                    if let Err(e) = std::fs::write(path, &wat) {
+                        eprintln!("Error saving .wat: {:#}", e)
+                    }
+                }
             }
         }
     }
+
+    fn save_vor_file(&self) {
+        if let Some(path) = rfd::FileDialog::new()
+            .set_title("Save .vor file")
+            .set_file_name("project.vor")
+            .save_file()
+        {
+            if let Ok(file) = std::fs::File::create(path) {
+                let _ = serde_json::to_writer_pretty(file, self.nodes.state());
+            }
+        }
+    }
+
+    fn load_vor_file(&mut self) {
+        if let Some(path) = rfd::FileDialog::new()
+            .set_title("Open .vor file")
+            .pick_file()
+        {
+            let file = std::fs::File::open(path).unwrap();
+            let state = serde_json::from_reader(file).unwrap();
+            self.nodes.set_state(state);
+        }
+    }
+
 }
 
 #[derive(Default)]
