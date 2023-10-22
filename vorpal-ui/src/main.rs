@@ -3,7 +3,7 @@
 #![warn(clippy::all, rust_2018_idioms)]
 
 mod app;
-pub use app::NodeGraphExample;
+pub use app::VorpalApp;
 
 // When compiling natively:
 #[cfg(not(target_arch = "wasm32"))]
@@ -17,10 +17,10 @@ fn main() {
             cc.egui_ctx.set_visuals(Visuals::dark());
             #[cfg(feature = "persistence")]
             {
-                Box::new(NodeGraphExample::new(cc))
+                Box::new(VorpalApp::new(cc))
             }
             #[cfg(not(feature = "persistence"))]
-            Box::<NodeGraphExample>::default()
+            Box::<VorpalApp>::default()
         }),
     )
     .expect("Failed to run native example");

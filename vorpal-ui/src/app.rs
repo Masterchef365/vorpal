@@ -12,7 +12,7 @@ use vorpal_widgets::*;
 
 // ========= First, define your user data types =============
 
-pub struct NodeGraphExample {
+pub struct VorpalApp {
     nodes: NodeGraphWidget,
     image: ImageViewWidget,
 
@@ -23,7 +23,7 @@ pub struct NodeGraphExample {
     engine: Engine,
 }
 
-impl Default for NodeGraphExample {
+impl Default for VorpalApp {
     fn default() -> Self {
         let mut nodes = NodeGraphWidget::default();
         nodes.context_mut().insert_input(
@@ -54,7 +54,7 @@ impl Default for NodeGraphExample {
 const PERSISTENCE_KEY: &str = "egui_node_graph";
 
 #[cfg(feature = "persistence")]
-impl NodeGraphExample {
+impl VorpalApp {
     /// If the persistence feature is enabled, Called once before the first frame.
     /// Load previous app state (if any).
     pub fn new(cc: &eframe::CreationContext<'_>) -> Self {
@@ -66,18 +66,13 @@ impl NodeGraphExample {
         let mut inst = Self::default();
 
         inst.nodes = state;
-        dbg!(inst.nodes.context().inputs());
 
         inst
         //Self::default()
     }
 }
 
-impl NodeGraphExample {
-    fn save_wat_file(&self) {}
-}
-
-impl eframe::App for NodeGraphExample {
+impl eframe::App for VorpalApp {
     #[cfg(feature = "persistence")]
     /// If the persistence function is enabled,
     /// Called by the frame work to save state before shutdown.
@@ -201,6 +196,16 @@ impl eframe::App for NodeGraphExample {
         egui::CentralPanel::default().show(ctx, |ui| {
             self.image.show(ui);
         });
+    }
+}
+
+impl VorpalApp {
+    fn save_wat_file(&self) {
+        if let Some(cache) = self.engine.cache.as_ref() {
+            if let Ok(wat) = cache.anal.compile_to_wat() {
+
+            }
+        }
     }
 }
 
