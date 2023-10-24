@@ -31,29 +31,29 @@ pub extern "C" fn make_image(width: u32, height: u32, time: f32) -> *const f32 {
 
 struct Plugin {
     out_rgba: Vec<f32>,
-    out_width: usize,
-    out_height: usize,
+    out_width: u32,
+    out_height: u32,
 }
 
 impl Plugin {
     pub fn new(out_width: u32, out_height: u32) -> Self {
         Self {
             out_rgba: vec![0_f32; (out_width * out_height * 4) as usize],
-            out_width: out_width as _,
-            out_height: out_height as _,
+            out_width,
+            out_height,
         }
     }
 
     pub fn get_image(&mut self, time: f32) -> &[f32] {
         for y in 0..self.out_height {
             for x in 0..self.out_width {
-                let idx = 4 * (y * self.out_width + x);
+                let [sx, sy] = [(x, self.out_width), (y, self.out_height)]
+                    .map(|(v, w)| v as f32 * 2. / w as f32 - 1.);
 
-                let sx = x as i32 - self.out_width as i32/2;
-                let sy = y as i32 - self.out_height as i32/2;
-                if sx*sx + sy*sy < 30 {
-                    self.out_rgba[idx..idx+4].copy_from_slice(&[0., 1., 2., 3.]);
-                }
+                let rgba = call_kernel(self.out_width as f32, self.out_height as f32, sx, sy, time);
+
+                let idx = 4 * (y * self.out_width + x) as usize;
+                self.out_rgba[idx..idx + 4].copy_from_slice(&rgba);
             }
         }
 
