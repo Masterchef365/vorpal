@@ -46,7 +46,7 @@ impl Default for VorpalApp {
         );
 
         Self {
-            user_wasm_path: None,
+            user_wasm_path: Some("target/wasm32-unknown-unknown/release/vorpal_image.wasm".into()),
             engine: None,
             use_wasm: true,
             time: Instant::now(),
