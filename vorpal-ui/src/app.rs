@@ -1,4 +1,4 @@
-use std::{path::PathBuf, time::Instant};
+use std::{path::{PathBuf, Path}, time::Instant};
 
 use eframe::egui::{self, ScrollArea, TextStyle};
 use ndarray::*;
@@ -11,25 +11,28 @@ use vorpal_widgets::{
 };
 
 // ========= First, define your user data types =============
+#[cfg_attr(feature = "persistence", derive(serde::Serialize, serde::Deserialize))]
+pub struct SaveState {
+    user_wasm_path: Option<PathBuf>,
+    nodes: NodeGraphWidget,
+}
 
 pub struct VorpalApp {
-    nodes: NodeGraphWidget,
+    use_wasm: bool,
+    saved: SaveState,
     image: ImageViewWidget,
-
-    user_wasm_path: Option<PathBuf>,
 
     image_data: NdArray<f32>,
 
     time: Instant,
 
     autosave_timer: Instant,
-    use_wasm: bool,
     engine: Option<VorpalWasmtime>,
 }
 
 const AUTOSAVE_INTERVAL_SECS: f32 = 30.0;
 
-impl Default for VorpalApp {
+impl Default for SaveState {
     fn default() -> Self {
         let mut nodes = NodeGraphWidget::default();
         nodes.context_mut().insert_input(
@@ -44,14 +47,21 @@ impl Default for VorpalApp {
             &ExternInputId::new(vorpal_ui::RESOLUTION_KEY.to_string()),
             Value::Vec2([1.; 2]),
         );
-
         Self {
             user_wasm_path: Some("target/wasm32-unknown-unknown/release/vorpal_image.wasm".into()),
+            nodes,
+        }
+    }
+}
+
+impl Default for VorpalApp {
+    fn default() -> Self {
+        Self {
+            saved: Default::default(),
             engine: None,
             use_wasm: true,
             time: Instant::now(),
             autosave_timer: Instant::now(),
-            nodes,
             image: Default::default(),
             image_data: NdArray::zeros(vec![100, 100, 4]),
         }
@@ -66,14 +76,14 @@ impl VorpalApp {
     /// If the persistence feature is enabled, Called once before the first frame.
     /// Load previous app state (if any).
     pub fn new(cc: &eframe::CreationContext<'_>) -> Self {
-        let state: NodeGraphWidget = cc
+        let state: SaveState = cc
             .storage
             .and_then(|storage| eframe::get_value(storage, PERSISTENCE_KEY))
             .unwrap_or_default();
 
         let mut inst = Self::default();
 
-        inst.nodes = state;
+        inst.saved = state;
 
         inst
         //Self::default()
@@ -85,7 +95,7 @@ impl eframe::App for VorpalApp {
     /// If the persistence function is enabled,
     /// Called by the frame work to save state before shutdown.
     fn save(&mut self, storage: &mut dyn eframe::Storage) {
-        eframe::set_value(storage, PERSISTENCE_KEY, &self.nodes);
+        eframe::set_value(storage, PERSISTENCE_KEY, &self.saved);
     }
 
     /// Called each time the UI needs repainting, which may be many times per second.
@@ -93,12 +103,12 @@ impl eframe::App for VorpalApp {
     fn update(&mut self, ctx: &egui::Context, frame: &mut eframe::Frame) {
         // Load wasm file if unloaded
         if self.engine.is_none() {
-            if let Some(path) = &self.user_wasm_path {
+            if let Some(path) = &self.saved.user_wasm_path {
                 match VorpalWasmtime::new(path.clone()) {
                     Ok(engine) => self.engine = Some(engine),
                     Err(e) => {
                         eprintln!("{:?}", e);
-                        self.user_wasm_path = None;
+                        self.saved.user_wasm_path = None;
                     }
                 }
             }
@@ -120,17 +130,17 @@ impl eframe::App for VorpalApp {
         let width = self.image_data.shape()[0];
         let height = self.image_data.shape()[1];
 
-        self.nodes.context_mut().insert_input(
+        self.saved.nodes.context_mut().insert_input(
             &ExternInputId::new(vorpal_ui::RESOLUTION_KEY.into()),
             Value::Vec2([width as f32, height as f32]),
         );
 
         // Paint image using native backend
-        //if let Ok(Some(node)) = self.nodes.extract_active_node() {
-        let node = self.nodes.extract_output_node();
+        //if let Ok(Some(node)) = self.saved.nodes.extract_active_node() {
+        let node = self.saved.nodes.extract_output_node();
         if self.use_wasm {
             if let Some(engine) = self.engine.as_mut() {
-                match engine.eval_image(&node, self.nodes.context()) {
+                match engine.eval_image(&node, self.saved.nodes.context()) {
                     Ok(image_data) => {
                         self.image_data.data_mut().copy_from_slice(&image_data);
                     }
@@ -147,12 +157,13 @@ impl eframe::App for VorpalApp {
         } else {
             for i in 0..width {
                 for j in 0..height {
-                    self.nodes.context_mut().insert_input(
+                    self.saved.nodes.context_mut().insert_input(
                         &ExternInputId::new(vorpal_ui::POS_KEY.into()),
                         Value::Vec2([i as f32, j as f32]),
                     );
 
-                    let Ok(Value::Vec4(result)) = evaluate_node(&node, self.nodes.context()) else {
+                    let Ok(Value::Vec4(result)) = evaluate_node(&node, self.saved.nodes.context())
+                    else {
                         panic!("Failed to eval node");
                     };
 
@@ -166,7 +177,7 @@ impl eframe::App for VorpalApp {
         self.image
             .set_image("my image".into(), ctx, array_to_imagedata(&self.image_data));
 
-        self.nodes.context_mut().insert_input(
+        self.saved.nodes.context_mut().insert_input(
             &ExternInputId::new(vorpal_ui::TIME_KEY.to_string()),
             Value::Scalar(self.time.elapsed().as_secs_f32()),
         );
@@ -192,7 +203,7 @@ impl eframe::App for VorpalApp {
                     }
                 });
 
-                let filename_text = match self.user_wasm_path.as_ref() {
+                let filename_text = match self.saved.user_wasm_path.as_ref() {
                     Some(text) => text.to_str().unwrap().to_string(),
                     None => "No WASM file loaded.".to_string(),
                 };
@@ -201,21 +212,23 @@ impl eframe::App for VorpalApp {
             });
         });
         egui::SidePanel::left("nodes").show(ctx, |ui| {
-            self.nodes.show(ui);
+            self.saved.nodes.show(ui);
         });
         egui::SidePanel::right("options").show(ctx, |ui| {
             ui.checkbox(&mut self.use_wasm, "Use WASM");
-            let maybe_node = self.nodes.extract_active_node();
+            let maybe_node = self.saved.nodes.extract_active_node();
 
             let text = match maybe_node {
                 Ok(Some(node)) => {
                     /*
                     let result = match self.use_wasm {
-                        true => self.engine.eval(&node, self.nodes.context()),
+                        true => self.engine.eval(&node, self.saved.nodes.context()),
                         false => {
                     */
-                    let result =
-                        vorpal_core::native_backend::evaluate_node(&node, self.nodes.context());
+                    let result = vorpal_core::native_backend::evaluate_node(
+                        &node,
+                        self.saved.nodes.context(),
+                    );
                     /*
                                 .map_err(|e| e.into())
                         }
@@ -260,7 +273,7 @@ impl VorpalApp {
             .set_title("Load .wasm file")
             .pick_file()
         {
-            self.user_wasm_path = Some(path);
+            self.saved.user_wasm_path = Some(path);
             // Require reloading the engine
             self.engine = None;
         }
@@ -290,8 +303,8 @@ impl VorpalApp {
             .set_file_name("project.vor")
             .save_file()
         {
-            if let Ok(file) = std::fs::File::create(path) {
-                let _ = serde_json::to_writer_pretty(file, self.nodes.state());
+            if let Err(e) = self.saved.save_vor_file(&path) {
+                eprintln!("Error saving {}; {:?}", path.display(), e);
             }
         }
     }
@@ -301,9 +314,21 @@ impl VorpalApp {
             .set_title("Open .vor file")
             .pick_file()
         {
-            let file = std::fs::File::open(path).unwrap();
-            let state = serde_json::from_reader(file).unwrap();
-            self.nodes.set_state(state);
+            self.saved = SaveState::load_vor_file(path).unwrap();
         }
     }
+}
+
+impl SaveState {
+    pub fn save_vor_file(&self, path: impl AsRef<Path>) -> anyhow::Result<()> {
+        let file = std::fs::File::create(path)?;
+        serde_json::to_writer_pretty(file, &self)?;
+        Ok(())
+    }
+
+    pub fn load_vor_file(path: impl AsRef<Path>) -> anyhow::Result<Self> {
+        let file = std::fs::File::open(path)?;
+        Ok(serde_json::from_reader(file)?)
+    }
+
 }
