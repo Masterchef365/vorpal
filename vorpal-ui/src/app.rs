@@ -1,13 +1,12 @@
 use std::time::Instant;
 
 use eframe::{
-    egui::{self, ScrollArea, TextStyle, TextureOptions, Ui},
-    epaint::{ColorImage, ImageData, ImageDelta, TextureId},
+    egui::{self, ScrollArea, TextStyle},
 };
 use ndarray::*;
 use vorpal_core::{native_backend::evaluate_node, ndarray, ExternInputId, Value};
 
-use vorpal_ui::wasmtime_integration::Engine;
+use vorpal_ui::{wasmtime_integration::Engine, image_view::{ImageViewWidget, array_to_imagedata}};
 use vorpal_widgets::*;
 
 // ========= First, define your user data types =============
@@ -224,7 +223,7 @@ impl eframe::App for VorpalApp {
 }
 
 impl VorpalApp {
-    fn save_wat_file(&self) {
+    pub fn save_wat_file(&self) {
         if let Some(cache) = self.engine.cache.as_ref() {
             if let Ok(wat) = cache.anal.compile_to_wat() {
                 if let Some(path) = rfd::FileDialog::new()
@@ -240,7 +239,7 @@ impl VorpalApp {
         }
     }
 
-    fn save_vor_file(&self) {
+    pub fn save_vor_file(&self) {
         if let Some(path) = rfd::FileDialog::new()
             .set_title("Save .vor file")
             .set_file_name("project.vor")
@@ -252,7 +251,7 @@ impl VorpalApp {
         }
     }
 
-    fn load_vor_file(&mut self) {
+    pub fn load_vor_file(&mut self) {
         if let Some(path) = rfd::FileDialog::new()
             .set_title("Open .vor file")
             .pick_file()
@@ -263,54 +262,4 @@ impl VorpalApp {
         }
     }
 
-}
-
-#[derive(Default)]
-struct ImageViewWidget {
-    tex: Option<TextureId>,
-}
-
-impl ImageViewWidget {
-    const OPTS: TextureOptions = TextureOptions::NEAREST;
-
-    fn show(&mut self, ui: &mut Ui) {
-        if let Some(tex) = self.tex {
-            ui.image(tex, ui.available_size());
-        }
-    }
-
-    fn set_image(&mut self, name: String, ctx: &egui::Context, image: ImageData) {
-        if let Some(tex) = self.tex {
-            ctx.tex_manager()
-                .write()
-                .set(tex, ImageDelta::full(image, Self::OPTS))
-        } else {
-            self.tex = Some(ctx.tex_manager().write().alloc(name, image, Self::OPTS))
-        }
-    }
-}
-
-/// Converts an image of 0 - 1 flaots into egui image data
-pub fn array_to_imagedata(array: &ndarray::NdArray<f32>) -> ImageData {
-    assert_eq!(
-        array.shape().len(),
-        3,
-        "Array must have shape [width, height, 3]"
-    );
-    assert_eq!(array.shape()[2], 4, "Image must be RGBA");
-    assert!(array.len() > 0);
-    let dims = [array.shape()[0], array.shape()[1]];
-    let mut rgba: Vec<u8> = array
-        .data()
-        .iter()
-        .map(|value| (value.clamp(0., 1.) * 255.0) as u8)
-        .collect();
-
-    // Set alpha to one. TODO: UNDO THIS!!
-    rgba.iter_mut()
-        .skip(3)
-        .step_by(4)
-        .for_each(|v| *v = u8::MAX);
-
-    ImageData::Color(ColorImage::from_rgba_unmultiplied(dims, &rgba))
 }

@@ -1,5 +1,5 @@
 use anyhow::Result;
-use notify::{RecommendedWatcher, RecursiveMode, Watcher};
+use notify::{RecursiveMode, Watcher};
 use std::{
     path::{Path, PathBuf},
     sync::{

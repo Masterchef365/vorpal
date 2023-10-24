@@ -36,8 +36,6 @@ pub extern "C" fn make_image(width: u32, height: u32, time: f32) -> *const f32 {
 
 struct Plugin {
     out_rgba: Vec<f32>,
-    out_width: u32,
-    out_height: u32,
 
     smoke_sim: SmokeSim,
     fluid_sim: FluidSim,
@@ -55,8 +53,6 @@ impl Plugin {
 
         Self {
             out_rgba: vec![0_f32; (out_width * out_height * 4) as usize],
-            out_width,
-            out_height,
 
             fluid_sim,
             smoke_sim,

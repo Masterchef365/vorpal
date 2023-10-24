@@ -1,3 +1,5 @@
+fn main() {}
+/*
 use std::rc::Rc;
 
 use vorpal_core::{ComponentFn, ComponentInfixOp, ExternContext, ExternInputId, Value};
@@ -54,3 +56,4 @@ fn main() {
         println!("{:?}", evaluate_node(&node, &ctx).unwrap());
     }
 }
+*/

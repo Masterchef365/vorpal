@@ -1,5 +1,5 @@
 use anyhow::Result;
-use std::{cell::RefCell, rc::Rc, time::Instant};
+use std::{rc::Rc};
 use vorpal_core::*;
 use vorpal_wasm::CodeAnalysis;
 use wasm_bridge::*;
