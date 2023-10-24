@@ -1,5 +1,5 @@
 use anyhow::Result;
-use std::{rc::Rc, path::{PathBuf, Path}};
+use std::{rc::Rc, path::{PathBuf}};
 use vorpal_core::*;
 use vorpal_wasm::CodeAnalysis;
 use wasm_bridge::*;

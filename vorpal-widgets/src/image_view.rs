@@ -1,9 +1,9 @@
-use eframe::{
-    egui::{self, TextureOptions, Ui},
+use egui::{
+    self,
     epaint::{ColorImage, ImageData, ImageDelta, TextureId},
+    TextureOptions, Ui,
 };
 use vorpal_core::ndarray;
-
 
 #[derive(Default)]
 pub struct ImageViewWidget {
@@ -58,4 +58,3 @@ pub fn array_to_imagedata(array: &ndarray::NdArray<f32>) -> ImageData {
 
     ImageData::Color(ColorImage::from_rgba_unmultiplied(dims, &rgba))
 }
-

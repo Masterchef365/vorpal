@@ -4,11 +4,11 @@ use eframe::egui::{self, ScrollArea, TextStyle};
 use ndarray::*;
 use vorpal_core::{native_backend::evaluate_node, ndarray, ExternInputId, Value};
 
-use vorpal_ui::{
+use vorpal_ui::wasmtime_integration::VorpalWasmtime;
+use vorpal_widgets::{
     image_view::{array_to_imagedata, ImageViewWidget},
-    wasmtime_integration::VorpalWasmtime,
+    node_editor::NodeGraphWidget,
 };
-use vorpal_widgets::*;
 
 // ========= First, define your user data types =============
 
