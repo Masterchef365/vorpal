@@ -47,8 +47,7 @@ impl Plugin {
     pub fn get_image(&mut self, time: f32) -> &[f32] {
         for y in 0..self.out_height {
             for x in 0..self.out_width {
-                let [sx, sy] = [(x, self.out_width), (y, self.out_height)]
-                    .map(|(v, w)| v as f32 * 2. / w as f32 - 1.);
+                let [sx, sy] = [x, y].map(|v| v as f32);
 
                 let rgba = call_kernel(self.out_width as f32, self.out_height as f32, sx, sy, time);
 
