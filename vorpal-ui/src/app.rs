@@ -96,7 +96,10 @@ impl eframe::App for VorpalApp {
             if let Some(path) = &self.user_wasm_path {
                 match VorpalWasmtime::new(path.clone()) {
                     Ok(engine) => self.engine = Some(engine),
-                    Err(e) => eprintln!("{:?}", e),
+                    Err(e) => {
+                        eprintln!("{:?}", e);
+                        self.user_wasm_path = None;
+                    }
                 }
             }
         }
