@@ -1,5 +1,5 @@
 use anyhow::Result;
-use std::{rc::Rc};
+use std::{rc::Rc, path::{PathBuf, Path}};
 use vorpal_core::*;
 use vorpal_wasm::CodeAnalysis;
 use wasm_bridge::*;
@@ -18,9 +18,7 @@ pub fn evaluate_node(node: &Node, ctx: &ExternContext) -> Result<Value> {
 }
 */
 
-const VORPAL_IMAGE_PATH: &str = "./target/wasm32-unknown-unknown/release/vorpal_image.wasm";
-
-pub struct Engine {
+pub struct VorpalWasmtime {
     wasm_engine: wasm_bridge::Engine,
     pub cache: Option<CachedCompilation>,
     watcher: FileWatcher,
@@ -35,11 +33,11 @@ pub struct CachedCompilation {
     pub anal: CodeAnalysis,
 }
 
-impl Engine {
-    pub fn new() -> Result<Self> {
+impl VorpalWasmtime {
+    pub fn new(wasm_path: PathBuf) -> Result<Self> {
         Ok(Self {
             wasm_engine: wasm_bridge::Engine::new(&Default::default())?,
-            watcher: FileWatcher::new(VORPAL_IMAGE_PATH.into())?,
+            watcher: FileWatcher::new(wasm_path)?,
             cache: None,
             cached_image_wasm: vec![],
         })

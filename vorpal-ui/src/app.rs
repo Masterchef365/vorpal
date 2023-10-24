@@ -1,12 +1,13 @@
-use std::time::Instant;
+use std::{path::PathBuf, time::Instant};
 
-use eframe::{
-    egui::{self, ScrollArea, TextStyle},
-};
+use eframe::egui::{self, ScrollArea, TextStyle};
 use ndarray::*;
 use vorpal_core::{native_backend::evaluate_node, ndarray, ExternInputId, Value};
 
-use vorpal_ui::{wasmtime_integration::Engine, image_view::{ImageViewWidget, array_to_imagedata}};
+use vorpal_ui::{
+    image_view::{array_to_imagedata, ImageViewWidget},
+    wasmtime_integration::VorpalWasmtime,
+};
 use vorpal_widgets::*;
 
 // ========= First, define your user data types =============
@@ -15,13 +16,15 @@ pub struct VorpalApp {
     nodes: NodeGraphWidget,
     image: ImageViewWidget,
 
+    user_wasm_path: Option<PathBuf>,
+
     image_data: NdArray<f32>,
 
     time: Instant,
 
     autosave_timer: Instant,
     use_wasm: bool,
-    engine: Engine,
+    engine: Option<VorpalWasmtime>,
 }
 
 const AUTOSAVE_INTERVAL_SECS: f32 = 30.0;
@@ -43,7 +46,8 @@ impl Default for VorpalApp {
         );
 
         Self {
-            engine: Engine::new().unwrap(),
+            user_wasm_path: None,
+            engine: None,
             use_wasm: true,
             time: Instant::now(),
             autosave_timer: Instant::now(),
@@ -87,6 +91,17 @@ impl eframe::App for VorpalApp {
     /// Called each time the UI needs repainting, which may be many times per second.
     /// Put your widgets into a `SidePanel`, `TopPanel`, `CentralPanel`, `Window` or `Area`.
     fn update(&mut self, ctx: &egui::Context, frame: &mut eframe::Frame) {
+        // Load wasm file if unloaded
+        if self.engine.is_none() {
+            if let Some(path) = &self.user_wasm_path {
+                match VorpalWasmtime::new(path.clone()) {
+                    Ok(engine) => self.engine = Some(engine),
+                    Err(e) => eprintln!("{:?}", e),
+                }
+            }
+        }
+
+        // Autosave
         if self.autosave_timer.elapsed().as_secs_f32() > AUTOSAVE_INTERVAL_SECS {
             self.autosave_timer = Instant::now();
 
@@ -111,17 +126,19 @@ impl eframe::App for VorpalApp {
         //if let Ok(Some(node)) = self.nodes.extract_active_node() {
         let node = self.nodes.extract_output_node();
         if self.use_wasm {
-            match self.engine.eval_image(&node, self.nodes.context()) {
-                Ok(image_data) => {
-                    self.image_data.data_mut().copy_from_slice(&image_data);
-                }
-                Err(e) => {
-                    eprintln!("Error {:#}", e);
-                    self.image_data
-                        .data_mut()
-                        .iter_mut()
-                        .zip([1., 0., 0., 0.].into_iter().cycle())
-                        .for_each(|(o, i)| *o = i);
+            if let Some(engine) = self.engine.as_mut() {
+                match engine.eval_image(&node, self.nodes.context()) {
+                    Ok(image_data) => {
+                        self.image_data.data_mut().copy_from_slice(&image_data);
+                    }
+                    Err(e) => {
+                        eprintln!("Error {:#}", e);
+                        self.image_data
+                            .data_mut()
+                            .iter_mut()
+                            .zip([1., 0., 0., 0.].into_iter().cycle())
+                            .for_each(|(o, i)| *o = i);
+                    }
                 }
             }
         } else {
@@ -155,19 +172,29 @@ impl eframe::App for VorpalApp {
             egui::menu::bar(ui, |ui| {
                 egui::widgets::global_dark_light_mode_switch(ui);
                 ui.menu_button("File", |ui| {
-                    if ui.button("Save .wat").clicked() {
+                    if ui.button("Save .wat (compiled wasm module text)").clicked() {
                         self.save_wat_file();
                     }
-                    if ui.button("Save .vor").clicked() {
+                    if ui.button("Save .vor (nodes)").clicked() {
                         self.save_vor_file();
                     }
-                    if ui.button("Load .vor").clicked() {
+                    if ui.button("Load .vor (nodes)").clicked() {
                         self.load_vor_file();
+                    }
+                    if ui.button("Load .wasm (user code)").clicked() {
+                        self.load_user_wasm_file();
                     }
                     if ui.button("Load defaults").clicked() {
                         *self = Self::default();
                     }
                 });
+
+                let filename_text = match self.user_wasm_path.as_ref() {
+                    Some(text) => text.to_str().unwrap().to_string(),
+                    None => "No WASM file loaded.".to_string(),
+                };
+                ui.label(filename_text);
+                //ui.menu_button(filename_text, |_| ());
             });
         });
         egui::SidePanel::left("nodes").show(ctx, |ui| {
@@ -201,11 +228,13 @@ impl eframe::App for VorpalApp {
                 Err(err) => format!("Execution error: {}", err),
             };
 
-            if let Some(cache) = self.engine.cache.as_ref() {
-                ScrollArea::vertical().show(ui, |ui| {
-                    let text = cache.anal.compile_to_wat().unwrap();
-                    ui.label(&text);
-                });
+            if let Some(engine) = self.engine.as_ref() {
+                if let Some(cache) = engine.cache.as_ref() {
+                    ScrollArea::vertical().show(ui, |ui| {
+                        let text = cache.anal.compile_to_wat().unwrap();
+                        ui.label(&text);
+                    });
+                }
             }
 
             ui.ctx().debug_painter().text(
@@ -223,16 +252,29 @@ impl eframe::App for VorpalApp {
 }
 
 impl VorpalApp {
+    pub fn load_user_wasm_file(&mut self) {
+        if let Some(path) = rfd::FileDialog::new()
+            .set_title("Load .wasm file")
+            .pick_file()
+        {
+            self.user_wasm_path = Some(path);
+            // Require reloading the engine
+            self.engine = None;
+        }
+    }
+
     pub fn save_wat_file(&self) {
-        if let Some(cache) = self.engine.cache.as_ref() {
-            if let Ok(wat) = cache.anal.compile_to_wat() {
-                if let Some(path) = rfd::FileDialog::new()
-                    .set_title("Save .wat file")
-                    .set_file_name("project.wat")
-                    .save_file()
-                {
-                    if let Err(e) = std::fs::write(path, &wat) {
-                        eprintln!("Error saving .wat: {:#}", e)
+        if let Some(engine) = self.engine.as_ref() {
+            if let Some(cache) = engine.cache.as_ref() {
+                if let Ok(wat) = cache.anal.compile_to_wat() {
+                    if let Some(path) = rfd::FileDialog::new()
+                        .set_title("Save .wat file")
+                        .set_file_name("project.wat")
+                        .save_file()
+                    {
+                        if let Err(e) = std::fs::write(path, &wat) {
+                            eprintln!("Error saving .wat: {:#}", e)
+                        }
                     }
                 }
             }
@@ -261,5 +303,4 @@ impl VorpalApp {
             self.nodes.set_state(state);
         }
     }
-
 }
