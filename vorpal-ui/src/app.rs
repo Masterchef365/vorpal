@@ -107,7 +107,7 @@ impl eframe::App for VorpalApp {
                 match VorpalWasmtime::new(path.clone()) {
                     Ok(engine) => self.engine = Some(engine),
                     Err(e) => {
-                        eprintln!("{:?}", e);
+                        eprintln!("Failed to load wasmtime {:?}", e);
                         self.saved.user_wasm_path = None;
                     }
                 }
@@ -145,7 +145,7 @@ impl eframe::App for VorpalApp {
                         self.image_data.data_mut().copy_from_slice(&image_data);
                     }
                     Err(e) => {
-                        eprintln!("Error {:#}", e);
+                        eprintln!("Error failed to eval {:#}", e);
                         self.image_data
                             .data_mut()
                             .iter_mut()
