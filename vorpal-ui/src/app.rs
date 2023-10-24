@@ -25,7 +25,7 @@ pub struct VorpalApp {
     engine: Engine,
 }
 
-const AUTOSAVE_INTERVAL_SECS: f32 = 3.0;
+const AUTOSAVE_INTERVAL_SECS: f32 = 30.0;
 
 impl Default for VorpalApp {
     fn default() -> Self {
