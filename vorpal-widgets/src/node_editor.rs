@@ -232,6 +232,11 @@ impl NodeTemplateIter for AllMyNodeTemplates<'_> {
     }
 }
 
+
+pub fn input_scalar(x: &mut Scalar) -> DragValue {
+    DragValue::new(x).speed(1e-2)
+}
+
 impl WidgetValueTrait for NodeGuiValue {
     type Response = MyResponse;
     type UserState = MyGraphState;
@@ -253,7 +258,7 @@ impl WidgetValueTrait for NodeGuiValue {
             ui.horizontal(|ui| {
                 for (num, name) in vector.iter_mut().zip(XYZW) {
                     ui.label(name);
-                    ui.add(DragValue::new(num).speed(1e-2));
+                    ui.add(input_scalar(num));
                 }
             });
         };
@@ -264,7 +269,7 @@ impl WidgetValueTrait for NodeGuiValue {
             Self(Value::Vec4(value)) => input_vector(value),
             Self(Value::Scalar(value)) => {
                 ui.horizontal(|ui| {
-                    ui.add(DragValue::new(value));
+                    ui.add(input_scalar(value));
                 });
             }
         }
