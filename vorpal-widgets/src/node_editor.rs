@@ -1,11 +1,11 @@
-use egui::{self, ComboBox, DragValue, Ui};
+use egui::{self, Color32, ComboBox, DragValue, Ui};
 use egui_node_graph::*;
-use vorpal_core::*;
 use std::{
     borrow::Cow,
     collections::{HashMap, HashSet},
     rc::Rc,
 };
+use vorpal_core::*;
 
 const XYZW: [&str; 4] = ["x", "y", "z", "w"];
 
@@ -76,10 +76,10 @@ pub struct MyGraphState {
 impl DataTypeTrait<MyGraphState> for DataType {
     fn data_type_color(&self, _user_state: &mut MyGraphState) -> egui::Color32 {
         match self {
-            DataType::Scalar => egui::Color32::from_rgb(38, 109, 211),
-            DataType::Vec2 => egui::Color32::from_rgb(238, 207, 109),
-            DataType::Vec3 => egui::Color32::LIGHT_GREEN,
-            DataType::Vec4 => egui::Color32::DARK_BLUE,
+            DataType::Scalar => Color32::from_rgb(22, 99, 169),
+            DataType::Vec2 => Color32::from_rgb(149, 0, 0),
+            DataType::Vec3 => Color32::from_rgb(33, 121, 18),
+            DataType::Vec4 => Color32::from_rgb(78, 19, 133),
         }
     }
 
@@ -232,7 +232,6 @@ impl NodeTemplateIter for AllMyNodeTemplates<'_> {
     }
 }
 
-
 pub fn input_scalar(x: &mut Scalar) -> DragValue {
     DragValue::new(x).speed(1e-2)
 }
@@ -372,6 +371,29 @@ impl NodeDataTrait for MyNodeData {
 
         responses
     }
+
+    fn titlebar_color(
+        &self,
+        _ui: &egui::Ui,
+        node_id: NodeId,
+        graph: &Graph<Self, Self::DataType, Self::ValueType>,
+        user_state: &mut Self::UserState,
+    ) -> Option<egui::Color32> {
+        graph[node_id]
+            .user_data
+            .template
+            .get_datatype()
+            .map(|dtype| dtype.data_type_color(user_state))
+    }
+
+    fn can_delete(
+        &self,
+        node_id: NodeId,
+        graph: &Graph<Self, Self::DataType, Self::ValueType>,
+        _user_state: &mut Self::UserState,
+    ) -> bool {
+        !matches!(graph[node_id].user_data.template, MyNodeTemplate::Output(_))
+    }
 }
 
 /// Detects whether there is a cycle in determining the output of the given node
@@ -401,7 +423,10 @@ fn detect_cycle_recursive(graph: &MyGraph, node_id: NodeId, stack: &mut HashSet<
     false
 }
 
-fn extract_node_from_graph(graph: &MyGraph, node_id: NodeId) -> anyhow::Result<Rc<vorpal_core::Node>> {
+fn extract_node_from_graph(
+    graph: &MyGraph,
+    node_id: NodeId,
+) -> anyhow::Result<Rc<vorpal_core::Node>> {
     extract_node_from_graph_recursive(graph, node_id, &mut OutputsCache::new())
 }
 
@@ -612,3 +637,28 @@ impl Default for NodeGraphWidget {
     }
 }
 
+impl MyNodeTemplate {
+    fn set_datatype(&mut self, input: DataType) {
+        match self {
+            MyNodeTemplate::Input(_, dtype)
+            | MyNodeTemplate::Make(dtype)
+            | MyNodeTemplate::ComponentInfixOp(_, dtype)
+            | MyNodeTemplate::ComponentFn(_, dtype)
+            | MyNodeTemplate::GetComponent(dtype)
+            | MyNodeTemplate::Output(dtype)
+            | MyNodeTemplate::Dot(dtype) => *dtype = input,
+        }
+    }
+
+    fn get_datatype(&self) -> Option<DataType> {
+        match self {
+            MyNodeTemplate::Input(_, dtype)
+            | MyNodeTemplate::Make(dtype)
+            | MyNodeTemplate::ComponentInfixOp(_, dtype)
+            | MyNodeTemplate::ComponentFn(_, dtype)
+            | MyNodeTemplate::GetComponent(dtype)
+            | MyNodeTemplate::Output(dtype)
+            | MyNodeTemplate::Dot(dtype) => Some(*dtype),
+        }
+    }
+}
