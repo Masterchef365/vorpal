@@ -25,7 +25,7 @@ impl ImageViewWidget {
                     vec2(available.y / tex_aspect, available.y)
                 };
 
-                ui.image(tex, size);
+                ui.image((tex, size));
             }
         }
     }
@@ -67,5 +67,5 @@ pub fn array_to_imagedata(array: &ndarray::NdArray<f32>) -> ImageData {
         .step_by(4)
         .for_each(|v| *v = u8::MAX);
 
-    ImageData::Color(ColorImage::from_rgba_unmultiplied(dims, &rgba))
+    ImageData::Color(ColorImage::from_rgba_unmultiplied(dims, &rgba).into())
 }

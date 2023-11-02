@@ -9,7 +9,7 @@ rust-version = "1.56"
 crate-type = ["cdylib", "rlib"]
 
 [dependencies]
-eframe = "0.22"
+eframe = "0.23"
 vorpal-core = { path = "../vorpal-core" }
 vorpal-wasm = { path = "../vorpal-wasm" }
 vorpal-widgets = { path = "../vorpal-widgets" }
