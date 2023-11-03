@@ -47,6 +47,10 @@ impl Default for SaveState {
             &ExternInputId::new(vorpal_ui::RESOLUTION_KEY.to_string()),
             Value::Vec2([1.; 2]),
         );
+        nodes.context_mut().insert_input(
+            &ExternInputId::new(vorpal_ui::CURSOR_KEY.to_string()),
+            Value::Vec2([-1.; 2]),
+        );
         Self {
             user_wasm_path: Some("target/wasm32-unknown-unknown/release/vorpal_image.wasm".into()),
             nodes,
@@ -86,7 +90,6 @@ impl VorpalApp {
         inst.saved = state;
 
         inst
-        //Self::default()
     }
 }
 
@@ -262,7 +265,22 @@ impl eframe::App for VorpalApp {
             );
         });
         egui::CentralPanel::default().show(ctx, |ui| {
-            self.image.show(ui);
+            let response = self.image.show(ui);
+            if response.clicked() | response.dragged() {
+                let cursor_pos = response.interact_pointer_pos().unwrap_or(egui::Pos2::new(-1., -1.));
+                let rel_pos = cursor_pos - response.rect.min;
+                let image_shape = self.image_data.shape();
+                let image_size_vect = egui::Vec2::new(image_shape[0] as f32, image_shape[1] as f32);
+                let pixel_pos = image_size_vect * rel_pos / response.rect.size();
+
+                self.saved.nodes.context_mut().insert_input(
+                    &ExternInputId::new(vorpal_ui::CURSOR_KEY.into()),
+                    Value::Vec2(pixel_pos.into())
+                );
+
+
+                //self.saved.nodes.context_mut().inputs[""];
+            }
         });
     }
 }

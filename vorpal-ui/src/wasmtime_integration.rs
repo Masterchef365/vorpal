@@ -62,18 +62,23 @@ impl VorpalWasmtime {
         let res_key = &ExternInputId::new(crate::RESOLUTION_KEY.into());
         let time_key = &ExternInputId::new(crate::TIME_KEY.into());
         let pos_key = &ExternInputId::new(crate::POS_KEY.into());
+        let cursor_key = &ExternInputId::new(crate::CURSOR_KEY.into());
 
         let input_list = vec![
             // See vorpal-wasm-builtins' special_image_function
             (res_key.clone(), DataType::Vec2),
             (pos_key.clone(), DataType::Vec2),
             (time_key.clone(), DataType::Scalar),
+            (cursor_key.clone(), DataType::Vec2),
         ];
 
         let Value::Vec2([width, height]) = ctx.inputs()[&res_key] else {
             panic!("Wrong vector type")
         };
         let Value::Scalar(time) = ctx.inputs()[&time_key] else {
+            panic!("Wrong vector type")
+        };
+        let Value::Vec2([cursor_x, cursor_y]) = ctx.inputs()[&cursor_key] else {
             panic!("Wrong vector type")
         };
 
@@ -119,9 +124,9 @@ impl VorpalWasmtime {
 
         let func = compile_data
             .instance
-            .get_typed_func::<(u32, u32, f32), u32>(&mut compile_data.store, "make_image")?;
+            .get_typed_func::<(u32, u32, f32, f32, f32), u32>(&mut compile_data.store, "make_image")?;
 
-        let ptr = func.call(&mut compile_data.store, (width, height, time))?;
+        let ptr = func.call(&mut compile_data.store, (width, height, time, cursor_x, cursor_y))?;
 
         let mut out_image = vec![0_f32; (width * height * 4) as usize];
         compile_data.mem.read(
