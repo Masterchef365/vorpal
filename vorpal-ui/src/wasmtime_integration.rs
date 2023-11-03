@@ -58,7 +58,7 @@ impl VorpalWasmtime {
     }
     */
 
-    pub fn eval_image(&mut self, node: &Node, ctx: &ExternContext) -> Result<Vec<f32>> {
+    pub fn eval_image(&mut self, node: &Node, ctx: &ExternParameters) -> Result<Vec<f32>> {
         let res_key = &ExternInputId::new(crate::RESOLUTION_KEY.into());
         let time_key = &ExternInputId::new(crate::TIME_KEY.into());
         let pos_key = &ExternInputId::new(crate::POS_KEY.into());

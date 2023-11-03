@@ -91,7 +91,7 @@ pub struct Sampler(NdArray<f32>, DataType, DataType);
 
 #[cfg_attr(feature = "persistence", derive(serde::Serialize, serde::Deserialize))]
 #[derive(Default)]
-pub struct ExternContext {
+pub struct ExternParameters {
     pub inputs: HashMap<ExternInputId, Value>,
     pub samplers: HashMap<ExternSamplerId, Sampler>,
 }
@@ -331,7 +331,7 @@ impl ExternSamplerId {
     }
 }
 
-impl ExternContext {
+impl ExternParameters {
     pub fn new(
         inputs: HashMap<ExternInputId, Value>,
         samplers: HashMap<ExternSamplerId, Sampler>,

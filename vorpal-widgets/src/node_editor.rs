@@ -13,7 +13,7 @@ const XYZW: [&str; 4] = ["x", "y", "z", "w"];
 /// a function using a node and connection paradigm
 #[cfg_attr(feature = "persistence", derive(serde::Serialize, serde::Deserialize))]
 pub struct NodeGraphWidget {
-    context: ExternContext,
+    context: ExternParameters,
     state: MyEditorState,
     user_state: MyGraphState,
 }
@@ -202,7 +202,7 @@ impl NodeTemplateTrait for MyNodeTemplate {
 }
 
 struct AllMyNodeTemplates<'ctx> {
-    ctx: &'ctx ExternContext,
+    ctx: &'ctx ExternParameters,
 }
 
 impl NodeTemplateIter for AllMyNodeTemplates<'_> {
@@ -512,7 +512,7 @@ impl Default for NodeGuiValue {
 
 impl NodeGraphWidget {
     /// Create a new nodegraph widget with the given input list
-    pub fn new(context: ExternContext) -> Self {
+    pub fn new(context: ExternParameters) -> Self {
         let mut state: MyEditorState = MyEditorState::default();
         let mut user_state: MyGraphState = Default::default();
 
@@ -542,11 +542,11 @@ impl NodeGraphWidget {
         self.state = state;
     }
 
-    pub fn context(&self) -> &ExternContext {
+    pub fn context(&self) -> &ExternParameters {
         &self.context
     }
 
-    pub fn context_mut(&mut self) -> &mut ExternContext {
+    pub fn context_mut(&mut self) -> &mut ExternParameters {
         &mut self.context
     }
 
