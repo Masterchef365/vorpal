@@ -243,7 +243,7 @@ impl eframe::App for VorpalApp {
                         Ok(value) => format!("The result is: {:?}", value),
                     }
                 }
-                Ok(None) => format!("No node selected"),
+                Ok(None) => format!(""),
                 Err(err) => format!("Execution error: {}", err),
             };
 
