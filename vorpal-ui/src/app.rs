@@ -277,9 +277,6 @@ impl eframe::App for VorpalApp {
                     &ExternInputId::new(vorpal_ui::CURSOR_KEY.into()),
                     Value::Vec2(pixel_pos.into())
                 );
-
-
-                //self.saved.nodes.context_mut().inputs[""];
             }
         });
     }

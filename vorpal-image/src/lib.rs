@@ -49,7 +49,7 @@ impl Plugin {
             for x in 0..self.out_width {
                 let [sx, sy] = [x, y].map(|v| v as f32);
 
-                let mut rgba = call_kernel(self.out_width as f32, self.out_height as f32, sx, sy, time, cursor_x, cursor_y);
+                let rgba = call_kernel(self.out_width as f32, self.out_height as f32, sx, sy, time, cursor_x, cursor_y);
 
                 let idx = 4 * (y * self.out_width + x) as usize;
                 self.out_rgba[idx..idx + 4].copy_from_slice(&rgba);
