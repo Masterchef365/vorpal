@@ -223,7 +223,40 @@ impl eframe::App for VorpalApp {
         });
         egui::SidePanel::right("options").show(ctx, |ui| {
             egui::Frame::default().show(ui, |ui| {
-                ui.label("uwu");
+                egui::ScrollArea::vertical().show(ui, |ui| {
+                    let mut set_key: Option<(FuncName, FuncName)> = None;
+
+                    for (function_name, node_widget) in &self.saved.functions {
+                        ui.horizontal(|ui| {
+                            // Edit function name
+                            let mut edit_func_name = function_name.clone();
+                            if ui.text_edit_singleline(&mut edit_func_name).changed() {
+                                set_key = Some((function_name.clone(), edit_func_name));
+                            }
+
+                            // Selection
+                            if ui
+                                .selectable_label(
+                                    &self.saved.selected_function == function_name,
+                                    "Select",
+                                )
+                                .clicked()
+                            {
+                                self.saved.selected_function = function_name.clone();
+                            }
+                        });
+                    }
+                    if ui.button("New").clicked() {
+                        self.saved
+                            .functions
+                            .insert("unnamed".into(), NodeGraphWidget::default());
+                    }
+
+                    if let Some((name, replace)) = set_key {
+                        let val = self.saved.functions.remove(&name).unwrap();
+                        self.saved.functions.insert(replace, val);
+                    }
+                })
             })
         });
         egui::CentralPanel::default().show(ctx, |ui| {
