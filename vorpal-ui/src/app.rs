@@ -161,7 +161,7 @@ impl eframe::App for VorpalApp {
         let nodes: NodeGraphs = self
             .saved
             .functions
-            .iter()
+            .iter_mut()
             .map(|(name, widget)| (name.clone(), widget.extract_output_node()))
             .collect();
 
@@ -300,10 +300,10 @@ impl VorpalApp {
     pub fn save_wat_file(&self) {
         if let Some(engine) = self.engine.as_ref() {
             if let Some(cache) = engine.cache.as_ref() {
-                if let Ok(wat) = cache.analyses.compile_to_wat() {
+                if let Ok(wat) = cache.analyses[&self.saved.selected_function].compile_to_wat() {
                     if let Some(path) = rfd::FileDialog::new()
                         .set_title("Save .wat file")
-                        .set_file_name("project.wat")
+                        .set_file_name(format!("{}.wat", self.saved.selected_function))
                         .save_file()
                     {
                         if let Err(e) = std::fs::write(path, &wat) {
