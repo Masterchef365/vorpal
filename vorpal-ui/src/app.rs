@@ -217,7 +217,11 @@ impl eframe::App for VorpalApp {
                     }
                 });
                 //ui.menu_button("Control", |ui| {
-                    ui.checkbox(&mut self.saved.pause, "Pause");
+                ui.checkbox(&mut self.saved.pause, "Pause");
+                if ui.button("Reset").clicked() {
+                    self.engine = None;
+
+                }
                 //});
 
                 let filename_text = match self.saved.user_wasm_path.as_ref() {
