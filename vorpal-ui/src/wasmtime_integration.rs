@@ -63,8 +63,6 @@ impl VorpalWasmtime {
         let time_key = &ExternInputId::new(crate::TIME_KEY.into());
         let pos_key = &ExternInputId::new(crate::POS_KEY.into());
 
-        dbg!(ctx);
-
         let input_list = vec![
             // See vorpal-wasm-builtins' special_image_function
             (res_key.clone(), DataType::Vec2),
