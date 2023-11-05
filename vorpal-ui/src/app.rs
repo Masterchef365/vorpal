@@ -1,14 +1,17 @@
 use std::{
     collections::HashMap,
     path::{Path, PathBuf},
+    rc::Rc,
     time::Instant,
 };
 
 use eframe::egui::{self, ScrollArea, TextStyle};
 use ndarray::*;
-use vorpal_core::{native_backend::evaluate_node, ndarray, ExternInputId, Value, ExternParameters};
+use vorpal_core::{
+    native_backend::evaluate_node, ndarray, ExternInputId, ExternParameters, Node, Value,
+};
 
-use vorpal_ui::wasmtime_integration::VorpalWasmtime;
+use vorpal_ui::wasmtime_integration::{NodeGraphs, VorpalWasmtime};
 use vorpal_widgets::{
     image_view::{array_to_imagedata, ImageViewWidget},
     node_editor::NodeGraphWidget,
@@ -52,9 +55,14 @@ fn default_inputs() -> ExternParameters {
         (
             ExternInputId::new(vorpal_ui::RESOLUTION_KEY.to_string()),
             Value::Vec2([1.; 2]),
-        )
-    ].into_iter().collect();
-    ExternParameters { inputs, samplers: Default::default() }
+        ),
+    ]
+    .into_iter()
+    .collect();
+    ExternParameters {
+        inputs,
+        samplers: Default::default(),
+    }
 }
 
 impl Default for SaveState {
@@ -150,9 +158,15 @@ impl eframe::App for VorpalApp {
 
         // Paint image using native backend
         //if let Ok(Some(node)) = self.saved.nodes.extract_active_node() {
-        let node = self.saved.selected_fn_widget().extract_output_node();
+        let nodes: NodeGraphs = self
+            .saved
+            .functions
+            .iter()
+            .map(|(name, widget)| (name.clone(), widget.extract_output_node()))
+            .collect();
+
         if let Some(engine) = self.engine.as_mut() {
-            match engine.eval_image(&node, self.saved.selected_fn_widget().context()) {
+            match engine.eval_image(&nodes, self.saved.selected_fn_widget().context()) {
                 Ok(image_data) => {
                     self.image_data.data_mut().copy_from_slice(&image_data);
                 }
@@ -286,7 +300,7 @@ impl VorpalApp {
     pub fn save_wat_file(&self) {
         if let Some(engine) = self.engine.as_ref() {
             if let Some(cache) = engine.cache.as_ref() {
-                if let Ok(wat) = cache.anal.compile_to_wat() {
+                if let Ok(wat) = cache.analyses.compile_to_wat() {
                     if let Some(path) = rfd::FileDialog::new()
                         .set_title("Save .wat file")
                         .set_file_name("project.wat")

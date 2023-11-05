@@ -1,0 +1,548 @@
+{
+  "user_wasm_path": "target/wasm32-unknown-unknown/release/vorpal_image.wasm",
+  "functions": {
+    "unnamed": {
+      "context": {
+        "inputs": {
+          "Resolution (pixels)": {
+            "Vec2": [
+              100.0,
+              100.0
+            ]
+          },
+          "Position (pixels)": {
+            "Vec2": [
+              0.0,
+              0.0
+            ]
+          },
+          "Time (seconds)": {
+            "Scalar": 32.76654
+          }
+        },
+        "samplers": {}
+      },
+      "state": {
+        "graph": {
+          "nodes": {
+            "map": [
+              {
+                "value": null,
+                "version": 0
+              },
+              {
+                "value": {
+                  "id": [
+                    {
+                      "idx": 1,
+                      "version": 1
+                    },
+                    78068189677429773926539545788405991210
+                  ],
+                  "label": "Output",
+                  "inputs": [
+                    [
+                      "x",
+                      [
+                        {
+                          "idx": 1,
+                          "version": 1
+                        },
+                        325347741765452920503033723856005594530
+                      ]
+                    ]
+                  ],
+                  "outputs": [],
+                  "user_data": {
+                    "template": {
+                      "Output": "Vec4"
+                    }
+                  }
+                },
+                "version": 1
+              },
+              {
+                "value": {
+                  "id": [
+                    {
+                      "idx": 2,
+                      "version": 1
+                    },
+                    78068189677429773926539545788405991210
+                  ],
+                  "label": "Make Vec4",
+                  "inputs": [
+                    [
+                      "x",
+                      [
+                        {
+                          "idx": 2,
+                          "version": 1
+                        },
+                        325347741765452920503033723856005594530
+                      ]
+                    ],
+                    [
+                      "y",
+                      [
+                        {
+                          "idx": 3,
+                          "version": 1
+                        },
+                        325347741765452920503033723856005594530
+                      ]
+                    ],
+                    [
+                      "z",
+                      [
+                        {
+                          "idx": 4,
+                          "version": 1
+                        },
+                        325347741765452920503033723856005594530
+                      ]
+                    ],
+                    [
+                      "w",
+                      [
+                        {
+                          "idx": 5,
+                          "version": 1
+                        },
+                        325347741765452920503033723856005594530
+                      ]
+                    ]
+                  ],
+                  "outputs": [
+                    [
+                      "out",
+                      [
+                        {
+                          "idx": 1,
+                          "version": 1
+                        },
+                        218860067300554651926328651307410828867
+                      ]
+                    ]
+                  ],
+                  "user_data": {
+                    "template": {
+                      "Make": "Vec4"
+                    }
+                  }
+                },
+                "version": 1
+              }
+            ],
+            "id": 78068189677429773926539545788405991210
+          },
+          "inputs": {
+            "map": [
+              {
+                "value": null,
+                "version": 0
+              },
+              {
+                "value": {
+                  "id": [
+                    {
+                      "idx": 1,
+                      "version": 1
+                    },
+                    325347741765452920503033723856005594530
+                  ],
+                  "typ": "Vec4",
+                  "value": {
+                    "Vec4": [
+                      0.51,
+                      0.0,
+                      0.0,
+                      0.0
+                    ]
+                  },
+                  "kind": "ConnectionOrConstant",
+                  "node": [
+                    {
+                      "idx": 1,
+                      "version": 1
+                    },
+                    78068189677429773926539545788405991210
+                  ],
+                  "shown_inline": true
+                },
+                "version": 1
+              },
+              {
+                "value": {
+                  "id": [
+                    {
+                      "idx": 2,
+                      "version": 1
+                    },
+                    325347741765452920503033723856005594530
+                  ],
+                  "typ": "Scalar",
+                  "value": {
+                    "Scalar": 0.0
+                  },
+                  "kind": "ConnectionOrConstant",
+                  "node": [
+                    {
+                      "idx": 2,
+                      "version": 1
+                    },
+                    78068189677429773926539545788405991210
+                  ],
+                  "shown_inline": true
+                },
+                "version": 1
+              },
+              {
+                "value": {
+                  "id": [
+                    {
+                      "idx": 3,
+                      "version": 1
+                    },
+                    325347741765452920503033723856005594530
+                  ],
+                  "typ": "Scalar",
+                  "value": {
+                    "Scalar": 0.94
+                  },
+                  "kind": "ConnectionOrConstant",
+                  "node": [
+                    {
+                      "idx": 2,
+                      "version": 1
+                    },
+                    78068189677429773926539545788405991210
+                  ],
+                  "shown_inline": true
+                },
+                "version": 1
+              },
+              {
+                "value": {
+                  "id": [
+                    {
+                      "idx": 4,
+                      "version": 1
+                    },
+                    325347741765452920503033723856005594530
+                  ],
+                  "typ": "Scalar",
+                  "value": {
+                    "Scalar": 0.0
+                  },
+                  "kind": "ConnectionOrConstant",
+                  "node": [
+                    {
+                      "idx": 2,
+                      "version": 1
+                    },
+                    78068189677429773926539545788405991210
+                  ],
+                  "shown_inline": true
+                },
+                "version": 1
+              },
+              {
+                "value": {
+                  "id": [
+                    {
+                      "idx": 5,
+                      "version": 1
+                    },
+                    325347741765452920503033723856005594530
+                  ],
+                  "typ": "Scalar",
+                  "value": {
+                    "Scalar": 0.0
+                  },
+                  "kind": "ConnectionOrConstant",
+                  "node": [
+                    {
+                      "idx": 2,
+                      "version": 1
+                    },
+                    78068189677429773926539545788405991210
+                  ],
+                  "shown_inline": true
+                },
+                "version": 1
+              }
+            ],
+            "id": 325347741765452920503033723856005594530
+          },
+          "outputs": {
+            "map": [
+              {
+                "value": null,
+                "version": 0
+              },
+              {
+                "value": {
+                  "id": [
+                    {
+                      "idx": 1,
+                      "version": 1
+                    },
+                    218860067300554651926328651307410828867
+                  ],
+                  "node": [
+                    {
+                      "idx": 2,
+                      "version": 1
+                    },
+                    78068189677429773926539545788405991210
+                  ],
+                  "typ": "Vec4"
+                },
+                "version": 1
+              }
+            ],
+            "id": 218860067300554651926328651307410828867
+          },
+          "connections": {
+            "map": [
+              {
+                "value": null,
+                "version": 0
+              },
+              {
+                "value": [
+                  {
+                    "idx": 1,
+                    "version": 1
+                  },
+                  218860067300554651926328651307410828867
+                ],
+                "version": 1
+              }
+            ],
+            "id": 325347741765452920503033723856005594530
+          }
+        },
+        "node_order": [
+          [
+            {
+              "idx": 1,
+              "version": 1
+            },
+            78068189677429773926539545788405991210
+          ],
+          [
+            {
+              "idx": 2,
+              "version": 1
+            },
+            78068189677429773926539545788405991210
+          ]
+        ],
+        "connection_in_progress": null,
+        "selected_nodes": [],
+        "ongoing_box_selection": null,
+        "node_positions": {
+          "map": [
+            {
+              "value": null,
+              "version": 0
+            },
+            {
+              "value": {
+                "x": 253.99002,
+                "y": 236.71335
+              },
+              "version": 1
+            },
+            {
+              "value": {
+                "x": 33.990124,
+                "y": 205.31294
+              },
+              "version": 1
+            }
+          ],
+          "id": 78068189677429773926539545788405991210
+        },
+        "node_finder": null,
+        "pan_zoom": {
+          "pan": {
+            "x": 0.0,
+            "y": 0.0
+          },
+          "zoom": 1.0
+        },
+        "_user_state": null
+      },
+      "user_state": {
+        "active_node": null
+      }
+    },
+    "kernel": {
+      "context": {
+        "inputs": {
+          "Resolution (pixels)": {
+            "Vec2": [
+              100.0,
+              100.0
+            ]
+          },
+          "Position (pixels)": {
+            "Vec2": [
+              0.0,
+              0.0
+            ]
+          },
+          "Time (seconds)": {
+            "Scalar": 37.044052
+          }
+        },
+        "samplers": {}
+      },
+      "state": {
+        "graph": {
+          "nodes": {
+            "map": [
+              {
+                "value": null,
+                "version": 0
+              },
+              {
+                "value": {
+                  "id": [
+                    {
+                      "idx": 1,
+                      "version": 1
+                    },
+                    158615226385500022823006413764491825479
+                  ],
+                  "label": "Output",
+                  "inputs": [
+                    [
+                      "x",
+                      [
+                        {
+                          "idx": 1,
+                          "version": 1
+                        },
+                        324251374084800413018130369840869441556
+                      ]
+                    ]
+                  ],
+                  "outputs": [],
+                  "user_data": {
+                    "template": {
+                      "Output": "Vec4"
+                    }
+                  }
+                },
+                "version": 1
+              }
+            ],
+            "id": 158615226385500022823006413764491825479
+          },
+          "inputs": {
+            "map": [
+              {
+                "value": null,
+                "version": 0
+              },
+              {
+                "value": {
+                  "id": [
+                    {
+                      "idx": 1,
+                      "version": 1
+                    },
+                    324251374084800413018130369840869441556
+                  ],
+                  "typ": "Vec4",
+                  "value": {
+                    "Vec4": [
+                      0.0,
+                      0.0,
+                      0.0,
+                      0.0
+                    ]
+                  },
+                  "kind": "ConnectionOrConstant",
+                  "node": [
+                    {
+                      "idx": 1,
+                      "version": 1
+                    },
+                    158615226385500022823006413764491825479
+                  ],
+                  "shown_inline": true
+                },
+                "version": 1
+              }
+            ],
+            "id": 324251374084800413018130369840869441556
+          },
+          "outputs": {
+            "map": [
+              {
+                "value": null,
+                "version": 0
+              }
+            ],
+            "id": 324341665599884598187950660541386770858
+          },
+          "connections": {
+            "map": [
+              {
+                "value": null,
+                "version": 0
+              }
+            ],
+            "id": 324251374084800413018130369840869441556
+          }
+        },
+        "node_order": [
+          [
+            {
+              "idx": 1,
+              "version": 1
+            },
+            158615226385500022823006413764491825479
+          ]
+        ],
+        "connection_in_progress": null,
+        "selected_nodes": [],
+        "ongoing_box_selection": null,
+        "node_positions": {
+          "map": [
+            {
+              "value": null,
+              "version": 0
+            },
+            {
+              "value": {
+                "x": 0.0,
+                "y": 0.0
+              },
+              "version": 1
+            }
+          ],
+          "id": 158615226385500022823006413764491825479
+        },
+        "node_finder": null,
+        "pan_zoom": {
+          "pan": {
+            "x": 0.0,
+            "y": 0.0
+          },
+          "zoom": 1.0
+        },
+        "_user_state": null
+      },
+      "user_state": {
+        "active_node": null
+      }
+    }
+  },
+  "selected_function": "kernel"
+}

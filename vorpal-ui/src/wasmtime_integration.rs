@@ -1,5 +1,5 @@
-use anyhow::Result;
-use std::{rc::Rc, path::{PathBuf}};
+use anyhow::{Context, Result};
+use std::{collections::HashMap, path::PathBuf, rc::Rc};
 use vorpal_core::*;
 use vorpal_wasm::CodeAnalysis;
 use wasm_bridge::*;
@@ -26,12 +26,15 @@ pub struct VorpalWasmtime {
 }
 
 pub struct CachedCompilation {
-    pub node: Node,
+    pub nodes: NodeGraphs,
     pub instance: Instance,
     pub store: Store<()>,
     pub mem: Memory,
-    pub anal: CodeAnalysis,
+    pub analyses: HashMap<FuncName, CodeAnalysis>,
 }
+
+pub type FuncName = String;
+pub type NodeGraphs = HashMap<FuncName, Rc<Node>>;
 
 impl VorpalWasmtime {
     pub fn new(wasm_path: PathBuf) -> Result<Self> {
@@ -58,7 +61,7 @@ impl VorpalWasmtime {
     }
     */
 
-    pub fn eval_image(&mut self, node: &Node, ctx: &ExternParameters) -> Result<Vec<f32>> {
+    pub fn eval_image(&mut self, nodes: &NodeGraphs, ctx: &ExternParameters) -> Result<Vec<f32>> {
         let res_key = &ExternInputId::new(crate::RESOLUTION_KEY.into());
         let time_key = &ExternInputId::new(crate::TIME_KEY.into());
         let pos_key = &ExternInputId::new(crate::POS_KEY.into());
@@ -84,13 +87,10 @@ impl VorpalWasmtime {
             .cache
             .take()
             .filter(|_| !self.watcher.changed())
-            .filter(|cache| &cache.node == node)
+            .filter(|cache| &cache.nodes == nodes)
             .map(|cache| Ok(cache))
             .unwrap_or_else(|| -> anyhow::Result<CachedCompilation> {
                 let mut store = Store::new(&self.wasm_engine, ());
-
-                // Compile code
-                let (kernel_module, anal) = self.compile(node, input_list)?;
 
                 // Start linking modules
                 let mut linker = Linker::new(&mut self.wasm_engine);
@@ -103,17 +103,27 @@ impl VorpalWasmtime {
                 // to .cargo/config.toml
                 linker.define(&store, "env", "memory", mem)?;
 
-                // Add modules
+                // Add special modules
                 linker.module(&mut store, "builtins", &self.builtins_module()?)?;
-                linker.module(&mut store, "kernel", &kernel_module)?;
+
+                // Compile code
+                let mut analyses = HashMap::new();
+                for (func_name, node) in nodes {
+                    let (kernel_module, anal) = self
+                        .compile(&node, &input_list)
+                        .with_context(|| format!("Compiling {func_name}()"))?;
+                    linker.module(&mut store, &func_name, &kernel_module)?;
+                    analyses.insert(func_name.clone(), anal);
+                }
+
                 let instance = linker.instantiate(&mut store, &self.image_module()?)?;
 
                 Ok(CachedCompilation {
-                    node: node.clone(),
+                    nodes: nodes.clone(),
                     instance,
                     store,
                     mem,
-                    anal,
+                    analyses,
                 })
             })?;
 
@@ -153,7 +163,7 @@ impl VorpalWasmtime {
     fn compile(
         &self,
         node: &Node,
-        input_list: Vec<(ExternInputId, DataType)>,
+        input_list: &[(ExternInputId, DataType)],
     ) -> Result<(Module, CodeAnalysis)> {
         let analysis = CodeAnalysis::new(Rc::new(node.clone()), input_list);
         let wat = analysis.compile_to_wat()?;

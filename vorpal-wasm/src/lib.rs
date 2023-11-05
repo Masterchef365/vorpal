@@ -31,7 +31,7 @@ pub struct CodeAnalysis {
 
 impl CodeAnalysis {
     /// Inputs to the function will be arranged in the given order
-    pub fn new(node: Rc<Node>, extern_inputs: Vec<(ExternInputId, DataType)>) -> Self {
+    pub fn new(node: Rc<Node>, extern_inputs: &[(ExternInputId, DataType)]) -> Self {
         let root = HashRcByPtr(node);
 
         let mut instance = Self {
@@ -47,7 +47,7 @@ impl CodeAnalysis {
         instance.input_list.push(InputParameter::OutputPointer(input_ptr));
 
         // Add the rest of the parameters
-        instance.input_list.extend(extern_inputs.into_iter().map(|(id, ty)| InputParameter::ExternalVariable(id, ty)));
+        instance.input_list.extend(extern_inputs.into_iter().map(|(id, ty)| InputParameter::ExternalVariable(id.clone(), *ty)));
 
         instance.find_inputs_and_locals_recursive(instance.root.clone());
 
