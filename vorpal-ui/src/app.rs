@@ -18,10 +18,12 @@ type FuncName = String;
 
 // ========= First, define your user data types =============
 #[cfg_attr(feature = "persistence", derive(serde::Serialize, serde::Deserialize))]
+#[serde(default)]
 pub struct SaveState {
     user_wasm_path: Option<PathBuf>,
     functions: Vec<(FuncName, NodeGraphWidget)>,
     selected_function: usize,
+    show_wat: bool,
 }
 
 pub struct VorpalApp {
@@ -73,6 +75,7 @@ impl Default for SaveState {
             user_wasm_path: Some("target/wasm32-unknown-unknown/release/vorpal_image.wasm".into()),
             functions: [("kernel".to_string(), nodes)].into_iter().collect(),
             selected_function: 0,
+            show_wat: false,
         }
     }
 }
@@ -234,9 +237,12 @@ impl eframe::App for VorpalApp {
                     Some(text) => text.display().to_string(), //text.to_str().unwrap().to_string(),
                     None => "No WASM file loaded.".to_string(),
                 };
-                ui.with_layout(egui::Layout::right_to_left(eframe::emath::Align::Max), |ui| {
-                    ui.label(format!("Running {filename_text}"));
-                })
+                ui.with_layout(
+                    egui::Layout::right_to_left(eframe::emath::Align::Max),
+                    |ui| {
+                        ui.label(format!("Running {filename_text}"));
+                    },
+                )
                 //ui.menu_button(filename_text, |_| ());
             });
         });
@@ -244,39 +250,59 @@ impl eframe::App for VorpalApp {
             self.saved.selected_fn_widget().show(ui);
         });
         egui::SidePanel::right("options").show(ctx, |ui| {
-            egui::ScrollArea::vertical().show(ui, |ui| {
-                // Function name editor
-                let mut remove: Option<usize> = None;
+            // Function name editor
+            let mut remove: Option<usize> = None;
 
-                for (idx, (function_name, _)) in self.saved.functions.iter_mut().enumerate() {
-                    ui.horizontal(|ui| {
-                        // Edit function name
-                        ui.add(TextEdit::singleline(function_name).desired_width(100.));
+            for (idx, (function_name, _)) in self.saved.functions.iter_mut().enumerate() {
+                ui.horizontal(|ui| {
+                    // Edit function name
+                    ui.add(TextEdit::singleline(function_name).desired_width(100.));
 
-                        // Deletion
-                        if ui.button("Delete").clicked() {
-                            remove = Some(idx);
-                        }
+                    // Deletion
+                    if ui.button("Delete").clicked() {
+                        remove = Some(idx);
+                    }
 
-                        // Selection
-                        if ui
-                            .selectable_label(self.saved.selected_function == idx, "Select")
-                            .clicked()
-                        {
-                            self.saved.selected_function = idx;
-                        }
-                    });
-                }
-                if ui.button("New").clicked() {
-                    self.saved
-                        .functions
-                        .push(("unnamed".into(), NodeGraphWidget::new(default_inputs())));
-                }
+                    // Selection
+                    if ui
+                        .selectable_label(self.saved.selected_function == idx, "Select")
+                        .clicked()
+                    {
+                        self.saved.selected_function = idx;
+                    }
+                });
+            }
+            if ui.button("New").clicked() {
+                self.saved
+                    .functions
+                    .push(("unnamed".into(), NodeGraphWidget::new(default_inputs())));
+            }
 
-                if let Some(idx) = remove {
-                    self.saved.functions.remove(idx);
-                }
-            })
+            if let Some(idx) = remove {
+                self.saved.functions.remove(idx);
+            }
+
+            ui.separator();
+
+            ui.checkbox(&mut self.saved.show_wat, "Show .wat");
+            if self.saved.show_wat {
+                egui::ScrollArea::vertical().show(ui, |ui| {
+                    // Show wasm code
+                    let mut text = self
+                        .engine
+                        .as_ref()
+                        .and_then(|engine| engine.cache.as_ref())
+                        .and_then(|cache| {
+                            cache.analyses[self.saved.selected_function]
+                                .compile_to_wat(
+                                    &self.saved.functions[self.saved.selected_function].0,
+                                )
+                                .ok()
+                        })
+                        .unwrap_or("No function".to_string());
+                    ui.code_editor(&mut text);
+                });
+            }
         });
         egui::CentralPanel::default().show(ctx, |ui| {
             let response = self.image.show(ui);

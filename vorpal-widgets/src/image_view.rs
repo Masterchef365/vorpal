@@ -1,7 +1,7 @@
 use egui::{
     self,
     epaint::{ColorImage, ImageData, ImageDelta, TextureId},
-    TextureOptions, Ui, vec2, Vec2, Image, Sense,
+    vec2, Image, Sense, TextureOptions, Ui, Vec2,
 };
 use vorpal_core::ndarray;
 

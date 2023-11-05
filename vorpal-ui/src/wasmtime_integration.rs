@@ -134,9 +134,15 @@ impl VorpalWasmtime {
 
         let func = compile_data
             .instance
-            .get_typed_func::<(u32, u32, f32, f32, f32), u32>(&mut compile_data.store, "make_image")?;
+            .get_typed_func::<(u32, u32, f32, f32, f32), u32>(
+                &mut compile_data.store,
+                "make_image",
+            )?;
 
-        let ptr = func.call(&mut compile_data.store, (width, height, time, cursor_x, cursor_y))?;
+        let ptr = func.call(
+            &mut compile_data.store,
+            (width, height, time, cursor_x, cursor_y),
+        )?;
 
         let mut out_image = vec![0_f32; (width * height * 4) as usize];
         compile_data.mem.read(
@@ -169,7 +175,7 @@ impl VorpalWasmtime {
         &self,
         node: &Node,
         input_list: &[(ExternInputId, DataType)],
-        func_name: &str
+        func_name: &str,
     ) -> Result<(Module, CodeAnalysis)> {
         let analysis = CodeAnalysis::new(Rc::new(node.clone()), input_list);
         let wat = analysis.compile_to_wat(func_name)?;
