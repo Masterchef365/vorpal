@@ -30,11 +30,11 @@ pub struct CachedCompilation {
     pub instance: Instance,
     pub store: Store<()>,
     pub mem: Memory,
-    pub analyses: HashMap<FuncName, CodeAnalysis>,
+    pub analyses: Vec<CodeAnalysis>,
 }
 
 pub type FuncName = String;
-pub type NodeGraphs = HashMap<FuncName, Rc<Node>>;
+pub type NodeGraphs = Vec<(FuncName, Rc<Node>)>;
 
 impl VorpalWasmtime {
     pub fn new(wasm_path: PathBuf) -> Result<Self> {
@@ -107,13 +107,13 @@ impl VorpalWasmtime {
                 linker.module(&mut store, "builtins", &self.builtins_module()?)?;
 
                 // Compile code
-                let mut analyses = HashMap::new();
+                let mut analyses = vec![];
                 for (func_name, node) in nodes {
                     let (kernel_module, anal) = self
                         .compile(&node, &input_list)
                         .with_context(|| format!("Compiling {func_name}()"))?;
                     linker.module(&mut store, &func_name, &kernel_module)?;
-                    analyses.insert(func_name.clone(), anal);
+                    analyses.push(anal);
                 }
 
                 let instance = linker.instantiate(&mut store, &self.image_module()?)?;

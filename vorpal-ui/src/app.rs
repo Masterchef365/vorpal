@@ -20,8 +20,8 @@ type FuncName = String;
 #[cfg_attr(feature = "persistence", derive(serde::Serialize, serde::Deserialize))]
 pub struct SaveState {
     user_wasm_path: Option<PathBuf>,
-    functions: HashMap<FuncName, NodeGraphWidget>,
-    selected_function: FuncName,
+    functions: Vec<(FuncName, NodeGraphWidget)>,
+    selected_function: usize,
 }
 
 pub struct VorpalApp {
@@ -68,7 +68,7 @@ impl Default for SaveState {
         Self {
             user_wasm_path: Some("target/wasm32-unknown-unknown/release/vorpal_image.wasm".into()),
             functions: [("kernel".to_string(), nodes)].into_iter().collect(),
-            selected_function: "kernel".to_string(),
+            selected_function: 0,
         }
     }
 }
@@ -241,47 +241,35 @@ impl eframe::App for VorpalApp {
         egui::SidePanel::right("options").show(ctx, |ui| {
             egui::Frame::default().show(ui, |ui| {
                 egui::ScrollArea::vertical().show(ui, |ui| {
-                    let mut set_key: Option<(FuncName, FuncName)> = None;
-                    let mut remove: Option<FuncName> = None;
+                    let mut remove: Option<usize> = None;
 
-                    for (function_name, _node_widget) in &self.saved.functions {
+                    for (idx, (function_name, _)) in self.saved.functions.iter_mut().enumerate() {
                         ui.horizontal(|ui| {
                             // Edit function name
-                            let mut edit_func_name = function_name.clone();
-                            if ui.text_edit_singleline(&mut edit_func_name).changed() {
-                                set_key = Some((function_name.clone(), edit_func_name));
-                            }
+                            ui.text_edit_singleline(function_name);
 
                             // Deletion
                             if ui.button("Delete").clicked() {
-                                remove = Some(function_name.clone());
+                                remove = Some(idx);
                             }
 
                             // Selection
                             if ui
-                                .selectable_label(
-                                    &self.saved.selected_function == function_name,
-                                    "Select",
-                                )
+                                .selectable_label(self.saved.selected_function == idx, "Select")
                                 .clicked()
                             {
-                                self.saved.selected_function = function_name.clone();
+                                self.saved.selected_function = idx;
                             }
                         });
                     }
                     if ui.button("New").clicked() {
                         self.saved
                             .functions
-                            .insert("unnamed".into(), NodeGraphWidget::new(default_inputs()));
+                            .push(("unnamed".into(), NodeGraphWidget::new(default_inputs())));
                     }
 
-                    if let Some(name) = remove {
-                        self.saved.functions.remove(&name).unwrap();
-                    }
-
-                    if let Some((name, replace)) = set_key {
-                        let val = self.saved.functions.remove(&name).unwrap();
-                        self.saved.functions.insert(replace, val);
+                    if let Some(idx) = remove {
+                        self.saved.functions.remove(idx);
                     }
                 })
             })
@@ -307,7 +295,7 @@ impl VorpalApp {
     pub fn save_wat_file(&self) {
         if let Some(engine) = self.engine.as_ref() {
             if let Some(cache) = engine.cache.as_ref() {
-                if let Ok(wat) = cache.analyses[&self.saved.selected_function].compile_to_wat() {
+                if let Ok(wat) = cache.analyses[self.saved.selected_function].compile_to_wat() {
                     if let Some(path) = rfd::FileDialog::new()
                         .set_title("Save .wat file")
                         .set_file_name(format!("{}.wat", self.saved.selected_function))
@@ -360,16 +348,14 @@ impl SaveState {
 impl SaveState {
     pub fn selected_fn_widget(&mut self) -> &mut NodeGraphWidget {
         if self.functions.is_empty() {
-            self.functions.insert(
+            self.functions.push((
                 "unnamed".to_string(),
                 NodeGraphWidget::new(default_inputs()),
-            );
+            ));
         }
 
-        if !self.functions.contains_key(&self.selected_function) {
-            self.selected_function = self.functions.keys().next().cloned().unwrap();
-        }
+        self.selected_function = self.selected_function.min(self.functions.len() - 1);
 
-        self.functions.get_mut(&self.selected_function).unwrap()
+        &mut self.functions[self.selected_function].1
     }
 }
