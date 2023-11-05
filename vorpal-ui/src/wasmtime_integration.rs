@@ -88,10 +88,20 @@ impl VorpalWasmtime {
         let width = width as u32;
         let height = height as u32;
 
+        let mut old_cache = None;
+
+        let nodes_changed = self
+            .cache
+            .as_ref()
+            .map(|cache_nodes| &cache_nodes.nodes != nodes)
+            .unwrap_or(false);
+        if !self.watcher.changed() && nodes_changed {
+            old_cache = self.cache.take();
+        }
+
         let mut compile_data: CachedCompilation = self
             .cache
             .take()
-            .filter(|_| !self.watcher.changed())
             .filter(|cache| &cache.nodes == nodes)
             .map(|cache| Ok(cache))
             .unwrap_or_else(|| -> anyhow::Result<CachedCompilation> {
@@ -153,27 +163,21 @@ impl VorpalWasmtime {
 
         // If we've had a node graph change but no wasm change, we can actually rely on the memoty
         // layout being the same! So, we copy the entire memory out of the old instance
-        let nodes_changed = self
-            .cache
-            .as_ref()
-            .map(|cache_nodes| &cache_nodes.nodes != nodes)
-            .unwrap_or(false);
-        if !self.watcher.changed() && nodes_changed {
-            eprintln!("Restoring old cached memory. This could be dangerous!");
-            if let Some(old_cache) = self.cache.take() {
-                // Allocate needed pages
-                let required_pages = old_cache.mem.size(&old_cache.store)
-                    - compile_data.mem.size(&compile_data.store);
-                compile_data
-                    .mem
-                    .grow(&mut compile_data.store, required_pages)?;
 
-                // Copy all of the memory
-                compile_data
-                    .mem
-                    .data_mut(&mut compile_data.store)
-                    .copy_from_slice(old_cache.mem.data(&old_cache.store));
-            }
+        if let Some(old_cache) = old_cache {
+            eprintln!("Restoring old cached memory. This could be dangerous!");
+            // Allocate needed pages
+            let required_pages =
+                old_cache.mem.size(&old_cache.store) - compile_data.mem.size(&compile_data.store);
+            compile_data
+                .mem
+                .grow(&mut compile_data.store, required_pages)?;
+
+            // Copy all of the memory
+            compile_data
+                .mem
+                .data_mut(&mut compile_data.store)
+                .copy_from_slice(old_cache.mem.data(&old_cache.store));
         }
 
         self.cache = Some(compile_data);
