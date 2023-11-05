@@ -270,6 +270,8 @@ impl eframe::App for VorpalApp {
                 });
             }
             if ui.button("New").clicked() {
+                self.saved.selected_function = self.saved.functions.len();
+
                 self.saved
                     .functions
                     .push(("unnamed".into(), NodeGraphWidget::new(default_inputs())));
