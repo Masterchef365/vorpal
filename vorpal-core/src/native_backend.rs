@@ -1,6 +1,6 @@
 use crate::*;
 
-pub fn evaluate_node(node: &Node, ctx: &ExternContext) -> Result<Value, EvalError> {
+pub fn evaluate_node(node: &Node, ctx: &ExternParameters) -> Result<Value, EvalError> {
     fn comp_infix<const N: usize>(
         mut a: [f32; N],
         infix: ComponentInfixOp,

@@ -18,8 +18,8 @@ impl ImageViewWidget {
             let available = ui.available_size();
             if let Some(tex_meta) = ui.ctx().tex_manager().read().meta(tex) {
                 let tex_size = Vec2::from(tex_meta.size.map(|v| v as f32));
-                let tex_aspect = tex_size.x/tex_size.y;
-                let size = if available.x/available.y < tex_aspect {
+                let tex_aspect = tex_size.x / tex_size.y;
+                let size = if available.x / available.y < tex_aspect {
                     vec2(available.x, available.x / tex_aspect)
                 } else {
                     vec2(available.y / tex_aspect, available.y)

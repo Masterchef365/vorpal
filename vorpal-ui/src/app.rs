@@ -1,24 +1,31 @@
-use std::{path::{PathBuf, Path}, time::Instant};
+use std::{
+    collections::HashMap,
+    path::{Path, PathBuf},
+    time::Instant,
+};
 
-use eframe::egui::{self, ScrollArea, TextStyle};
+use eframe::egui::{self, TextEdit};
 use ndarray::*;
-use vorpal_core::{native_backend::evaluate_node, ndarray, ExternInputId, Value};
+use vorpal_core::{ndarray, ExternInputId, ExternParameters, Value};
 
-use vorpal_ui::wasmtime_integration::VorpalWasmtime;
+use vorpal_ui::wasmtime_integration::{NodeGraphs, VorpalWasmtime};
 use vorpal_widgets::{
     image_view::{array_to_imagedata, ImageViewWidget},
     node_editor::NodeGraphWidget,
 };
 
+type FuncName = String;
+
 // ========= First, define your user data types =============
 #[cfg_attr(feature = "persistence", derive(serde::Serialize, serde::Deserialize))]
 pub struct SaveState {
     user_wasm_path: Option<PathBuf>,
-    nodes: NodeGraphWidget,
+    functions: Vec<(FuncName, NodeGraphWidget)>,
+    selected_function: usize,
 }
 
 pub struct VorpalApp {
-    use_wasm: bool,
+    //use_wasm: bool,
     saved: SaveState,
     image: ImageViewWidget,
 
@@ -32,28 +39,40 @@ pub struct VorpalApp {
 
 const AUTOSAVE_INTERVAL_SECS: f32 = 30.0;
 
+fn default_inputs() -> ExternParameters {
+    let inputs = [
+        (
+            ExternInputId::new(vorpal_ui::TIME_KEY.to_string()),
+            Value::Scalar(0.1),
+        ),
+        (
+            ExternInputId::new(vorpal_ui::POS_KEY.to_string()),
+            Value::Vec2([0.; 2]),
+        ),
+        (
+            ExternInputId::new(vorpal_ui::RESOLUTION_KEY.to_string()),
+            Value::Vec2([1.; 2]),
+        ),
+        (
+            ExternInputId::new(vorpal_ui::CURSOR_KEY.to_string()),
+            Value::Vec2([-1.; 2]),
+        ),
+    ]
+    .into_iter()
+    .collect();
+    ExternParameters {
+        inputs,
+        samplers: Default::default(),
+    }
+}
+
 impl Default for SaveState {
     fn default() -> Self {
-        let mut nodes = NodeGraphWidget::default();
-        nodes.context_mut().insert_input(
-            &ExternInputId::new(vorpal_ui::TIME_KEY.to_string()),
-            Value::Scalar(0.1),
-        );
-        nodes.context_mut().insert_input(
-            &ExternInputId::new(vorpal_ui::POS_KEY.to_string()),
-            Value::Vec2([0.; 2]),
-        );
-        nodes.context_mut().insert_input(
-            &ExternInputId::new(vorpal_ui::RESOLUTION_KEY.to_string()),
-            Value::Vec2([1.; 2]),
-        );
-        nodes.context_mut().insert_input(
-            &ExternInputId::new(vorpal_ui::CURSOR_KEY.to_string()),
-            Value::Vec2([-1.; 2]),
-        );
+        let nodes = NodeGraphWidget::new(default_inputs());
         Self {
             user_wasm_path: Some("target/wasm32-unknown-unknown/release/vorpal_image.wasm".into()),
-            nodes,
+            functions: [("kernel".to_string(), nodes)].into_iter().collect(),
+            selected_function: 0,
         }
     }
 }
@@ -63,7 +82,6 @@ impl Default for VorpalApp {
         Self {
             saved: Default::default(),
             engine: None,
-            use_wasm: true,
             time: Instant::now(),
             autosave_timer: Instant::now(),
             image: Default::default(),
@@ -133,54 +151,60 @@ impl eframe::App for VorpalApp {
         let width = self.image_data.shape()[0];
         let height = self.image_data.shape()[1];
 
-        self.saved.nodes.context_mut().insert_input(
+        self.saved.selected_fn_widget().context_mut().insert_input(
             &ExternInputId::new(vorpal_ui::RESOLUTION_KEY.into()),
             Value::Vec2([width as f32, height as f32]),
         );
 
         // Paint image using native backend
         //if let Ok(Some(node)) = self.saved.nodes.extract_active_node() {
-        let node = self.saved.nodes.extract_output_node();
-        if self.use_wasm {
-            if let Some(engine) = self.engine.as_mut() {
-                match engine.eval_image(&node, self.saved.nodes.context()) {
-                    Ok(image_data) => {
-                        self.image_data.data_mut().copy_from_slice(&image_data);
-                    }
-                    Err(e) => {
-                        eprintln!("Error failed to eval {:#}", e);
-                        self.image_data
-                            .data_mut()
-                            .iter_mut()
-                            .zip([1., 0., 0., 0.].into_iter().cycle())
-                            .for_each(|(o, i)| *o = i);
-                    }
+        let nodes: NodeGraphs = self
+            .saved
+            .functions
+            .iter_mut()
+            .map(|(name, widget)| (name.clone(), widget.extract_output_node()))
+            .collect();
+
+        if let Some(engine) = self.engine.as_mut() {
+            match engine.eval_image(&nodes, self.saved.selected_fn_widget().context()) {
+                Ok(image_data) => {
+                    self.image_data.data_mut().copy_from_slice(&image_data);
                 }
-            }
-        } else {
-            for i in 0..width {
-                for j in 0..height {
-                    self.saved.nodes.context_mut().insert_input(
-                        &ExternInputId::new(vorpal_ui::POS_KEY.into()),
-                        Value::Vec2([i as f32, j as f32]),
-                    );
-
-                    let Ok(Value::Vec4(result)) = evaluate_node(&node, self.saved.nodes.context())
-                    else {
-                        panic!("Failed to eval node");
-                    };
-
-                    for (k, component) in result.into_iter().enumerate() {
-                        self.image_data[[j, i, k]] = component;
-                    }
+                Err(e) => {
+                    eprintln!("Error failed to eval {:#}", e);
+                    self.image_data
+                        .data_mut()
+                        .iter_mut()
+                        .zip([1., 0., 0., 0.].into_iter().cycle())
+                        .for_each(|(o, i)| *o = i);
                 }
             }
         }
 
+        /*
+        for i in 0..width {
+            for j in 0..height {
+                self.saved.selected_fn_widget().context_mut().insert_input(
+                    &ExternInputId::new(vorpal_ui::POS_KEY.into()),
+                    Value::Vec2([i as f32, j as f32]),
+                );
+
+                let Ok(Value::Vec4(result)) = evaluate_node(&node, self.saved.selected_fn_widget().context())
+                else {
+                    panic!("Failed to eval node");
+                };
+
+                for (k, component) in result.into_iter().enumerate() {
+                    self.image_data[[j, i, k]] = component;
+                }
+            }
+        }
+        */
+
         self.image
             .set_image("my image".into(), ctx, array_to_imagedata(&self.image_data));
 
-        self.saved.nodes.context_mut().insert_input(
+        self.saved.selected_fn_widget().context_mut().insert_input(
             &ExternInputId::new(vorpal_ui::TIME_KEY.to_string()),
             Value::Scalar(self.time.elapsed().as_secs_f32()),
         );
@@ -215,67 +239,57 @@ impl eframe::App for VorpalApp {
             });
         });
         egui::SidePanel::left("nodes").show(ctx, |ui| {
-            self.saved.nodes.show(ui);
+            self.saved.selected_fn_widget().show(ui);
         });
         egui::SidePanel::right("options").show(ctx, |ui| {
-            ui.checkbox(&mut self.use_wasm, "Use WASM");
-            let maybe_node = self.saved.nodes.extract_active_node();
+            egui::ScrollArea::vertical().show(ui, |ui| {
+                // Function name editor
+                let mut remove: Option<usize> = None;
 
-            let text = match maybe_node {
-                Ok(Some(node)) => {
-                    /*
-                    let result = match self.use_wasm {
-                        true => self.engine.eval(&node, self.saved.nodes.context()),
-                        false => {
-                    */
-                    let result = vorpal_core::native_backend::evaluate_node(
-                        &node,
-                        self.saved.nodes.context(),
-                    );
-                    /*
-                                .map_err(|e| e.into())
+                for (idx, (function_name, _)) in self.saved.functions.iter_mut().enumerate() {
+                    ui.horizontal(|ui| {
+                        // Edit function name
+                        ui.add(TextEdit::singleline(function_name).desired_width(100.));
+
+                        // Deletion
+                        if ui.button("Delete").clicked() {
+                            remove = Some(idx);
                         }
-                    };
-                    */
 
-                    match result {
-                        Err(e) => format!("Error: {:?}", e),
-                        Ok(value) => format!("The result is: {:?}", value),
-                    }
-                }
-                Ok(None) => format!(""),
-                Err(err) => format!("Execution error: {}", err),
-            };
-
-            if let Some(engine) = self.engine.as_ref() {
-                if let Some(cache) = engine.cache.as_ref() {
-                    ScrollArea::vertical().show(ui, |ui| {
-                        let text = cache.anal.compile_to_wat().unwrap();
-                        ui.label(&text);
+                        // Selection
+                        if ui
+                            .selectable_label(self.saved.selected_function == idx, "Select")
+                            .clicked()
+                        {
+                            self.saved.selected_function = idx;
+                        }
                     });
                 }
-            }
+                if ui.button("New").clicked() {
+                    self.saved
+                        .functions
+                        .push(("unnamed".into(), NodeGraphWidget::new(default_inputs())));
+                }
 
-            ui.ctx().debug_painter().text(
-                egui::pos2(10.0, 35.0),
-                egui::Align2::LEFT_TOP,
-                text,
-                TextStyle::Button.resolve(&ui.ctx().style()),
-                egui::Color32::WHITE,
-            );
+                if let Some(idx) = remove {
+                    self.saved.functions.remove(idx);
+                }
+            })
         });
         egui::CentralPanel::default().show(ctx, |ui| {
             let response = self.image.show(ui);
             if response.clicked() | response.dragged() {
-                let cursor_pos = response.interact_pointer_pos().unwrap_or(egui::Pos2::new(-1., -1.));
+                let cursor_pos = response
+                    .interact_pointer_pos()
+                    .unwrap_or(egui::Pos2::new(-1., -1.));
                 let rel_pos = cursor_pos - response.rect.min;
                 let image_shape = self.image_data.shape();
                 let image_size_vect = egui::Vec2::new(image_shape[0] as f32, image_shape[1] as f32);
                 let pixel_pos = image_size_vect * rel_pos / response.rect.size();
 
-                self.saved.nodes.context_mut().insert_input(
+                self.saved.selected_fn_widget().context_mut().insert_input(
                     &ExternInputId::new(vorpal_ui::CURSOR_KEY.into()),
-                    Value::Vec2(pixel_pos.into())
+                    Value::Vec2(pixel_pos.into()),
                 );
             }
         });
@@ -297,10 +311,13 @@ impl VorpalApp {
     pub fn save_wat_file(&self) {
         if let Some(engine) = self.engine.as_ref() {
             if let Some(cache) = engine.cache.as_ref() {
-                if let Ok(wat) = cache.anal.compile_to_wat() {
+                let (func_name, _) = &self.saved.functions[self.saved.selected_function];
+                if let Ok(wat) =
+                    cache.analyses[self.saved.selected_function].compile_to_wat(&func_name)
+                {
                     if let Some(path) = rfd::FileDialog::new()
                         .set_title("Save .wat file")
-                        .set_file_name("project.wat")
+                        .set_file_name(format!("{}.wat", func_name))
                         .save_file()
                     {
                         if let Err(e) = std::fs::write(path, &wat) {
@@ -345,5 +362,19 @@ impl SaveState {
         let file = std::fs::File::open(path)?;
         Ok(serde_json::from_reader(file)?)
     }
+}
 
+impl SaveState {
+    pub fn selected_fn_widget(&mut self) -> &mut NodeGraphWidget {
+        if self.functions.is_empty() {
+            self.functions.push((
+                "unnamed".to_string(),
+                NodeGraphWidget::new(default_inputs()),
+            ));
+        }
+
+        self.selected_function = self.selected_function.min(self.functions.len() - 1);
+
+        &mut self.functions[self.selected_function].1
+    }
 }
