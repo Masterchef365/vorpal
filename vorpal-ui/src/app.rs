@@ -295,7 +295,8 @@ impl VorpalApp {
     pub fn save_wat_file(&self) {
         if let Some(engine) = self.engine.as_ref() {
             if let Some(cache) = engine.cache.as_ref() {
-                if let Ok(wat) = cache.analyses[self.saved.selected_function].compile_to_wat() {
+                let (func_name, _) = &self.saved.functions[self.saved.selected_function];
+                if let Ok(wat) = cache.analyses[self.saved.selected_function].compile_to_wat(&func_name) {
                     if let Some(path) = rfd::FileDialog::new()
                         .set_title("Save .wat file")
                         .set_file_name(format!("{}.wat", self.saved.selected_function))

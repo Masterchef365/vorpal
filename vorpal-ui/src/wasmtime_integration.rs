@@ -110,7 +110,7 @@ impl VorpalWasmtime {
                 let mut analyses = vec![];
                 for (func_name, node) in nodes {
                     let (kernel_module, anal) = self
-                        .compile(&node, &input_list)
+                        .compile(&node, &input_list, &func_name)
                         .with_context(|| format!("Compiling {func_name}()"))?;
                     linker.module(&mut store, &func_name, &kernel_module)?;
                     analyses.push(anal);
@@ -164,9 +164,10 @@ impl VorpalWasmtime {
         &self,
         node: &Node,
         input_list: &[(ExternInputId, DataType)],
+        func_name: &str
     ) -> Result<(Module, CodeAnalysis)> {
         let analysis = CodeAnalysis::new(Rc::new(node.clone()), input_list);
-        let wat = analysis.compile_to_wat()?;
+        let wat = analysis.compile_to_wat(func_name)?;
         let kernel_module = Module::new(&self.wasm_engine, wat)?;
         Ok((kernel_module, analysis))
     }

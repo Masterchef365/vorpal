@@ -73,7 +73,7 @@ impl CodeAnalysis {
     }
 
     /// Compile this analysis to webassembly
-    pub fn compile_to_wat(&self) -> Result<String> {
+    pub fn compile_to_wat(&self, func_name: &str) -> Result<String> {
         // Build parameter list
         let mut input_var_ids = HashSet::new();
         let mut param_list_text = String::new();
@@ -151,7 +151,7 @@ impl CodeAnalysis {
 {builtin_imports}
 
 ;; == Function declaration ==
-  (func $kernel {param_list_text}
+  (func ${func_name} {param_list_text}
 
 ;; Local variables
 {locals_text}
@@ -161,7 +161,7 @@ impl CodeAnalysis {
 {output_stack_text}
 ;; == Function end ==
   )
-  (export "kernel" (func $kernel))
+  (export "{func_name}" (func ${func_name}))
 )"#
         );
 
