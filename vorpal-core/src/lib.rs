@@ -87,10 +87,11 @@ pub enum Node {
 
 /// Sampler(A, B, C), samples ndarray A with a coordinate of vector B and returns vector C
 #[cfg_attr(feature = "persistence", derive(serde::Serialize, serde::Deserialize))]
+#[derive(Debug)]
 pub struct Sampler(NdArray<f32>, DataType, DataType);
 
 #[cfg_attr(feature = "persistence", derive(serde::Serialize, serde::Deserialize))]
-#[derive(Default)]
+#[derive(Default, Debug)]
 pub struct ExternParameters {
     pub inputs: HashMap<ExternInputId, Value>,
     pub samplers: HashMap<ExternSamplerId, Sampler>,

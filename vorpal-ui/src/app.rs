@@ -6,7 +6,7 @@ use std::{
 
 use eframe::egui::{self, ScrollArea, TextStyle};
 use ndarray::*;
-use vorpal_core::{native_backend::evaluate_node, ndarray, ExternInputId, Value};
+use vorpal_core::{native_backend::evaluate_node, ndarray, ExternInputId, Value, ExternParameters};
 
 use vorpal_ui::wasmtime_integration::VorpalWasmtime;
 use vorpal_widgets::{
@@ -39,21 +39,27 @@ pub struct VorpalApp {
 
 const AUTOSAVE_INTERVAL_SECS: f32 = 30.0;
 
+fn default_inputs() -> ExternParameters {
+    let inputs = [
+        (
+            ExternInputId::new(vorpal_ui::TIME_KEY.to_string()),
+            Value::Scalar(0.1),
+        ),
+        (
+            ExternInputId::new(vorpal_ui::POS_KEY.to_string()),
+            Value::Vec2([0.; 2]),
+        ),
+        (
+            ExternInputId::new(vorpal_ui::RESOLUTION_KEY.to_string()),
+            Value::Vec2([1.; 2]),
+        )
+    ].into_iter().collect();
+    ExternParameters { inputs, samplers: Default::default() }
+}
+
 impl Default for SaveState {
     fn default() -> Self {
-        let mut nodes = NodeGraphWidget::default();
-        nodes.context_mut().insert_input(
-            &ExternInputId::new(vorpal_ui::TIME_KEY.to_string()),
-            Value::Scalar(0.1),
-        );
-        nodes.context_mut().insert_input(
-            &ExternInputId::new(vorpal_ui::POS_KEY.to_string()),
-            Value::Vec2([0.; 2]),
-        );
-        nodes.context_mut().insert_input(
-            &ExternInputId::new(vorpal_ui::RESOLUTION_KEY.to_string()),
-            Value::Vec2([1.; 2]),
-        );
+        let nodes = NodeGraphWidget::new(default_inputs());
         Self {
             user_wasm_path: Some("target/wasm32-unknown-unknown/release/vorpal_image.wasm".into()),
             functions: [("kernel".to_string(), nodes)].into_iter().collect(),
@@ -249,7 +255,7 @@ impl eframe::App for VorpalApp {
                     if ui.button("New").clicked() {
                         self.saved
                             .functions
-                            .insert("unnamed".into(), NodeGraphWidget::default());
+                            .insert("unnamed".into(), NodeGraphWidget::new(default_inputs()));
                     }
 
                     if let Some((name, replace)) = set_key {
