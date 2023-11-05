@@ -1,15 +1,12 @@
 use std::{
     collections::HashMap,
     path::{Path, PathBuf},
-    rc::Rc,
     time::Instant,
 };
 
-use eframe::egui::{self, ScrollArea, TextStyle};
+use eframe::egui::{self};
 use ndarray::*;
-use vorpal_core::{
-    native_backend::evaluate_node, ndarray, ExternInputId, ExternParameters, Node, Value,
-};
+use vorpal_core::{ndarray, ExternInputId, ExternParameters, Value};
 
 use vorpal_ui::wasmtime_integration::{NodeGraphs, VorpalWasmtime};
 use vorpal_widgets::{
@@ -245,13 +242,19 @@ impl eframe::App for VorpalApp {
             egui::Frame::default().show(ui, |ui| {
                 egui::ScrollArea::vertical().show(ui, |ui| {
                     let mut set_key: Option<(FuncName, FuncName)> = None;
+                    let mut remove: Option<FuncName> = None;
 
-                    for (function_name, node_widget) in &self.saved.functions {
+                    for (function_name, _node_widget) in &self.saved.functions {
                         ui.horizontal(|ui| {
                             // Edit function name
                             let mut edit_func_name = function_name.clone();
                             if ui.text_edit_singleline(&mut edit_func_name).changed() {
                                 set_key = Some((function_name.clone(), edit_func_name));
+                            }
+
+                            // Deletion
+                            if ui.button("Delete").clicked() {
+                                remove = Some(function_name.clone());
                             }
 
                             // Selection
@@ -270,6 +273,10 @@ impl eframe::App for VorpalApp {
                         self.saved
                             .functions
                             .insert("unnamed".into(), NodeGraphWidget::new(default_inputs()));
+                    }
+
+                    if let Some(name) = remove {
+                        self.saved.functions.remove(&name).unwrap();
                     }
 
                     if let Some((name, replace)) = set_key {
@@ -353,8 +360,10 @@ impl SaveState {
 impl SaveState {
     pub fn selected_fn_widget(&mut self) -> &mut NodeGraphWidget {
         if self.functions.is_empty() {
-            self.functions
-                .insert("unnamed".to_string(), NodeGraphWidget::default());
+            self.functions.insert(
+                "unnamed".to_string(),
+                NodeGraphWidget::new(default_inputs()),
+            );
         }
 
         if !self.functions.contains_key(&self.selected_function) {
