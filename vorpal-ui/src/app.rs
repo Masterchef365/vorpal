@@ -286,7 +286,7 @@ impl eframe::App for VorpalApp {
                 let image_size_vect = egui::Vec2::new(image_shape[0] as f32, image_shape[1] as f32);
                 let pixel_pos = image_size_vect * rel_pos / response.rect.size();
 
-                self.saved.nodes.context_mut().insert_input(
+                self.saved.selected_fn_widget().context_mut().insert_input(
                     &ExternInputId::new(vorpal_ui::CURSOR_KEY.into()),
                     Value::Vec2(pixel_pos.into())
                 );
