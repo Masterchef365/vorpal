@@ -1,7 +1,7 @@
 use egui::{
     self,
     epaint::{ColorImage, ImageData, ImageDelta, TextureId},
-    vec2, TextureOptions, Ui, Vec2,
+    TextureOptions, Ui, vec2, Vec2, Image, Sense,
 };
 use vorpal_core::ndarray;
 
@@ -13,7 +13,7 @@ pub struct ImageViewWidget {
 impl ImageViewWidget {
     const OPTS: TextureOptions = TextureOptions::NEAREST;
 
-    pub fn show(&mut self, ui: &mut Ui) {
+    pub fn show(&mut self, ui: &mut Ui) -> egui::Response {
         if let Some(tex) = self.tex {
             let available = ui.available_size();
             if let Some(tex_meta) = ui.ctx().tex_manager().read().meta(tex) {
@@ -25,9 +25,11 @@ impl ImageViewWidget {
                     vec2(available.y / tex_aspect, available.y)
                 };
 
-                ui.image((tex, size));
+                return ui.add(Image::new((tex, size)).sense(Sense::click_and_drag()));
             }
         }
+
+        ui.label("Texture not set, this is an error!")
     }
 
     pub fn set_image(&mut self, name: String, ctx: &egui::Context, image: ImageData) {

@@ -10,6 +10,7 @@ pub mod wasmtime_integration;
 pub const TIME_KEY: &str = "Time (seconds)";
 pub const POS_KEY: &str = "Position (pixels)";
 pub const RESOLUTION_KEY: &str = "Resolution (pixels)";
+pub const CURSOR_KEY: &str = "Cursor position (pixels)";
 
 #[cfg(target_arch = "wasm32")]
 use eframe::wasm_bindgen::{self, prelude::*};
