@@ -4,7 +4,7 @@ use std::{
     time::Instant,
 };
 
-use eframe::egui::{self};
+use eframe::egui::{self, TextEdit};
 use ndarray::*;
 use vorpal_core::{ndarray, ExternInputId, ExternParameters, Value};
 
@@ -56,7 +56,7 @@ fn default_inputs() -> ExternParameters {
         (
             ExternInputId::new(vorpal_ui::CURSOR_KEY.to_string()),
             Value::Vec2([-1.; 2]),
-        )
+        ),
     ]
     .into_iter()
     .collect();
@@ -242,45 +242,46 @@ impl eframe::App for VorpalApp {
             self.saved.selected_fn_widget().show(ui);
         });
         egui::SidePanel::right("options").show(ctx, |ui| {
-            egui::Frame::default().show(ui, |ui| {
-                egui::ScrollArea::vertical().show(ui, |ui| {
-                    let mut remove: Option<usize> = None;
+            egui::ScrollArea::vertical().show(ui, |ui| {
+                // Function name editor
+                let mut remove: Option<usize> = None;
 
-                    for (idx, (function_name, _)) in self.saved.functions.iter_mut().enumerate() {
-                        ui.horizontal(|ui| {
-                            // Edit function name
-                            ui.text_edit_singleline(function_name);
+                for (idx, (function_name, _)) in self.saved.functions.iter_mut().enumerate() {
+                    ui.horizontal(|ui| {
+                        // Edit function name
+                        ui.add(TextEdit::singleline(function_name).desired_width(100.));
 
-                            // Deletion
-                            if ui.button("Delete").clicked() {
-                                remove = Some(idx);
-                            }
+                        // Deletion
+                        if ui.button("Delete").clicked() {
+                            remove = Some(idx);
+                        }
 
-                            // Selection
-                            if ui
-                                .selectable_label(self.saved.selected_function == idx, "Select")
-                                .clicked()
-                            {
-                                self.saved.selected_function = idx;
-                            }
-                        });
-                    }
-                    if ui.button("New").clicked() {
-                        self.saved
-                            .functions
-                            .push(("unnamed".into(), NodeGraphWidget::new(default_inputs())));
-                    }
+                        // Selection
+                        if ui
+                            .selectable_label(self.saved.selected_function == idx, "Select")
+                            .clicked()
+                        {
+                            self.saved.selected_function = idx;
+                        }
+                    });
+                }
+                if ui.button("New").clicked() {
+                    self.saved
+                        .functions
+                        .push(("unnamed".into(), NodeGraphWidget::new(default_inputs())));
+                }
 
-                    if let Some(idx) = remove {
-                        self.saved.functions.remove(idx);
-                    }
-                })
+                if let Some(idx) = remove {
+                    self.saved.functions.remove(idx);
+                }
             })
         });
         egui::CentralPanel::default().show(ctx, |ui| {
             let response = self.image.show(ui);
             if response.clicked() | response.dragged() {
-                let cursor_pos = response.interact_pointer_pos().unwrap_or(egui::Pos2::new(-1., -1.));
+                let cursor_pos = response
+                    .interact_pointer_pos()
+                    .unwrap_or(egui::Pos2::new(-1., -1.));
                 let rel_pos = cursor_pos - response.rect.min;
                 let image_shape = self.image_data.shape();
                 let image_size_vect = egui::Vec2::new(image_shape[0] as f32, image_shape[1] as f32);
@@ -288,7 +289,7 @@ impl eframe::App for VorpalApp {
 
                 self.saved.selected_fn_widget().context_mut().insert_input(
                     &ExternInputId::new(vorpal_ui::CURSOR_KEY.into()),
-                    Value::Vec2(pixel_pos.into())
+                    Value::Vec2(pixel_pos.into()),
                 );
             }
         });
@@ -311,7 +312,9 @@ impl VorpalApp {
         if let Some(engine) = self.engine.as_ref() {
             if let Some(cache) = engine.cache.as_ref() {
                 let (func_name, _) = &self.saved.functions[self.saved.selected_function];
-                if let Ok(wat) = cache.analyses[self.saved.selected_function].compile_to_wat(&func_name) {
+                if let Ok(wat) =
+                    cache.analyses[self.saved.selected_function].compile_to_wat(&func_name)
+                {
                     if let Some(path) = rfd::FileDialog::new()
                         .set_title("Save .wat file")
                         .set_file_name(format!("{}.wat", func_name))
