@@ -24,6 +24,7 @@ pub struct SaveState {
     functions: Vec<(FuncName, NodeGraphWidget)>,
     selected_function: usize,
     show_wat: bool,
+    pause: bool,
 }
 
 pub struct VorpalApp {
@@ -76,6 +77,7 @@ impl Default for SaveState {
             functions: [("kernel".to_string(), nodes)].into_iter().collect(),
             selected_function: 0,
             show_wat: false,
+            pause: false,
         }
     }
 }
@@ -125,92 +127,74 @@ impl eframe::App for VorpalApp {
     /// Called each time the UI needs repainting, which may be many times per second.
     /// Put your widgets into a `SidePanel`, `TopPanel`, `CentralPanel`, `Window` or `Area`.
     fn update(&mut self, ctx: &egui::Context, frame: &mut eframe::Frame) {
-        // Load wasm file if unloaded
-        if self.engine.is_none() {
-            if let Some(path) = &self.saved.user_wasm_path {
-                match VorpalWasmtime::new(path.clone()) {
-                    Ok(engine) => self.engine = Some(engine),
-                    Err(e) => {
-                        eprintln!("Failed to load wasmtime {:?}", e);
-                        self.saved.user_wasm_path = None;
+        if !self.saved.pause {
+            // Load wasm file if unloaded
+            if self.engine.is_none() {
+                if let Some(path) = &self.saved.user_wasm_path {
+                    match VorpalWasmtime::new(path.clone()) {
+                        Ok(engine) => self.engine = Some(engine),
+                        Err(e) => {
+                            eprintln!("Failed to load wasmtime {:?}", e);
+                            self.saved.user_wasm_path = None;
+                        }
                     }
                 }
             }
-        }
 
-        // Autosave
-        if self.autosave_timer.elapsed().as_secs_f32() > AUTOSAVE_INTERVAL_SECS {
-            self.autosave_timer = Instant::now();
+            // Autosave
+            if self.autosave_timer.elapsed().as_secs_f32() > AUTOSAVE_INTERVAL_SECS {
+                self.autosave_timer = Instant::now();
 
-            if let Some(storage) = frame.storage_mut() {
-                self.save(storage);
-                storage.flush();
-                eprintln!("Autosave successful");
-            }
-        }
-
-        ctx.request_repaint();
-
-        let width = self.image_data.shape()[0];
-        let height = self.image_data.shape()[1];
-
-        self.saved.selected_fn_widget().context_mut().insert_input(
-            &ExternInputId::new(vorpal_ui::RESOLUTION_KEY.into()),
-            Value::Vec2([width as f32, height as f32]),
-        );
-
-        // Paint image using native backend
-        //if let Ok(Some(node)) = self.saved.nodes.extract_active_node() {
-        let nodes: NodeGraphs = self
-            .saved
-            .functions
-            .iter_mut()
-            .map(|(name, widget)| (name.clone(), widget.extract_output_node()))
-            .collect();
-
-        if let Some(engine) = self.engine.as_mut() {
-            match engine.eval_image(&nodes, self.saved.selected_fn_widget().context()) {
-                Ok(image_data) => {
-                    self.image_data.data_mut().copy_from_slice(&image_data);
-                }
-                Err(e) => {
-                    eprintln!("Error failed to eval {:#}", e);
-                    self.image_data
-                        .data_mut()
-                        .iter_mut()
-                        .zip([1., 0., 0., 0.].into_iter().cycle())
-                        .for_each(|(o, i)| *o = i);
+                if let Some(storage) = frame.storage_mut() {
+                    self.save(storage);
+                    storage.flush();
+                    eprintln!("Autosave successful");
                 }
             }
-        }
 
-        /*
-        for i in 0..width {
-            for j in 0..height {
-                self.saved.selected_fn_widget().context_mut().insert_input(
-                    &ExternInputId::new(vorpal_ui::POS_KEY.into()),
-                    Value::Vec2([i as f32, j as f32]),
-                );
+            ctx.request_repaint();
 
-                let Ok(Value::Vec4(result)) = evaluate_node(&node, self.saved.selected_fn_widget().context())
-                else {
-                    panic!("Failed to eval node");
-                };
+            let width = self.image_data.shape()[0];
+            let height = self.image_data.shape()[1];
 
-                for (k, component) in result.into_iter().enumerate() {
-                    self.image_data[[j, i, k]] = component;
+            self.saved.selected_fn_widget().context_mut().insert_input(
+                &ExternInputId::new(vorpal_ui::RESOLUTION_KEY.into()),
+                Value::Vec2([width as f32, height as f32]),
+            );
+
+            // Paint image using native backend
+            //if let Ok(Some(node)) = self.saved.nodes.extract_active_node() {
+            let nodes: NodeGraphs = self
+                .saved
+                .functions
+                .iter_mut()
+                .map(|(name, widget)| (name.clone(), widget.extract_output_node()))
+                .collect();
+
+            if let Some(engine) = self.engine.as_mut() {
+                match engine.eval_image(&nodes, self.saved.selected_fn_widget().context()) {
+                    Ok(image_data) => {
+                        self.image_data.data_mut().copy_from_slice(&image_data);
+                    }
+                    Err(e) => {
+                        eprintln!("Error failed to eval {:#}", e);
+                        self.image_data
+                            .data_mut()
+                            .iter_mut()
+                            .zip([1., 0., 0., 0.].into_iter().cycle())
+                            .for_each(|(o, i)| *o = i);
+                    }
                 }
             }
+
+            self.image
+                .set_image("my image".into(), ctx, array_to_imagedata(&self.image_data));
+
+            self.saved.selected_fn_widget().context_mut().insert_input(
+                &ExternInputId::new(vorpal_ui::TIME_KEY.to_string()),
+                Value::Scalar(self.time.elapsed().as_secs_f32()),
+            );
         }
-        */
-
-        self.image
-            .set_image("my image".into(), ctx, array_to_imagedata(&self.image_data));
-
-        self.saved.selected_fn_widget().context_mut().insert_input(
-            &ExternInputId::new(vorpal_ui::TIME_KEY.to_string()),
-            Value::Scalar(self.time.elapsed().as_secs_f32()),
-        );
 
         egui::TopBottomPanel::top("top").show(ctx, |ui| {
             egui::menu::bar(ui, |ui| {
@@ -232,17 +216,26 @@ impl eframe::App for VorpalApp {
                         *self = Self::default();
                     }
                 });
+                //ui.menu_button("Control", |ui| {
+                    ui.checkbox(&mut self.saved.pause, "Pause");
+                //});
 
                 let filename_text = match self.saved.user_wasm_path.as_ref() {
-                    Some(text) => text.display().to_string(), //text.to_str().unwrap().to_string(),
+                    Some(path) => path
+                        .file_name()
+                        .unwrap()
+                        .to_str()
+                        .map(|s| s.to_string())
+                        .unwrap(),
                     None => "No WASM file loaded.".to_string(),
                 };
+
                 ui.with_layout(
                     egui::Layout::right_to_left(eframe::emath::Align::Max),
                     |ui| {
                         ui.label(format!("Running {filename_text}"));
                     },
-                )
+                );
                 //ui.menu_button(filename_text, |_| ());
             });
         });
@@ -375,6 +368,7 @@ impl VorpalApp {
             .pick_file()
         {
             self.saved = SaveState::load_vor_file(path).unwrap();
+            self.engine = None;
         }
     }
 }
