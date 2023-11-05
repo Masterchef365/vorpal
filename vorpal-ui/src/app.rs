@@ -231,10 +231,12 @@ impl eframe::App for VorpalApp {
                 });
 
                 let filename_text = match self.saved.user_wasm_path.as_ref() {
-                    Some(text) => text.to_str().unwrap().to_string(),
+                    Some(text) => text.display().to_string(), //text.to_str().unwrap().to_string(),
                     None => "No WASM file loaded.".to_string(),
                 };
-                ui.label(filename_text);
+                ui.with_layout(egui::Layout::right_to_left(eframe::emath::Align::Max), |ui| {
+                    ui.label(format!("Running {filename_text}"));
+                })
                 //ui.menu_button(filename_text, |_| ());
             });
         });
