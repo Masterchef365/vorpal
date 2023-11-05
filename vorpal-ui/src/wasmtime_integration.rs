@@ -103,6 +103,7 @@ impl VorpalWasmtime {
             .cache
             .take()
             .filter(|cache| &cache.nodes == nodes)
+            .filter(|_| !self.watcher.changed())
             .map(|cache| Ok(cache))
             .unwrap_or_else(|| -> anyhow::Result<CachedCompilation> {
                 let mut store = Store::new(&self.wasm_engine, ());
@@ -142,6 +143,24 @@ impl VorpalWasmtime {
                 })
             })?;
 
+        // If we've had a node graph change but no wasm change, we can actually rely on the memoty
+        // layout being the same! So, we copy the entire memory out of the old instance
+        if let Some(old_cache) = old_cache {
+            eprintln!("Restoring old cached memory. This could be dangerous!");
+            // Allocate needed pages
+            let required_pages =
+                old_cache.mem.size(&old_cache.store) - compile_data.mem.size(&compile_data.store);
+            compile_data
+                .mem
+                .grow(&mut compile_data.store, required_pages)?;
+
+            // Copy all of the memory
+            compile_data
+                .mem
+                .data_mut(&mut compile_data.store)
+                .copy_from_slice(old_cache.mem.data(&old_cache.store));
+        }
+
         let func = compile_data
             .instance
             .get_typed_func::<(u32, u32, f32, f32, f32), u32>(
@@ -161,28 +180,7 @@ impl VorpalWasmtime {
             bytemuck::cast_slice_mut(&mut out_image),
         )?;
 
-        // If we've had a node graph change but no wasm change, we can actually rely on the memoty
-        // layout being the same! So, we copy the entire memory out of the old instance
-
-        if let Some(old_cache) = old_cache {
-            eprintln!("Restoring old cached memory. This could be dangerous!");
-            // Allocate needed pages
-            let required_pages =
-                old_cache.mem.size(&old_cache.store) - compile_data.mem.size(&compile_data.store);
-            compile_data
-                .mem
-                .grow(&mut compile_data.store, required_pages)?;
-
-            // Copy all of the memory
-            compile_data
-                .mem
-                .data_mut(&mut compile_data.store)
-                .copy_from_slice(old_cache.mem.data(&old_cache.store));
-        }
-
         self.cache = Some(compile_data);
-
-        //dbg!(&out_image);
 
         Ok(out_image)
     }
