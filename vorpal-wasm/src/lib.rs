@@ -133,7 +133,7 @@ impl CodeAnalysis {
         }
 
         let builtin_imports = r#"(import "builtins" "sine" (func $builtin_sine (param f32) (result f32)))
-            (import "builtins" "cosine" (func $builtin_cosine (param f32) (result f32)))
+(import "builtins" "cosine" (func $builtin_cosine (param f32) (result f32)))
 (import "builtins" "tangent" (func $builtin_tangent (param f32) (result f32)))
 (import "builtins" "natural_log" (func $builtin_natural_log (param f32) (result f32)))
 (import "builtins" "natural_exp" (func $builtin_natural_exp (param f32) (result f32)))

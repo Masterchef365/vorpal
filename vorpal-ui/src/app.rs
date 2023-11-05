@@ -299,7 +299,7 @@ impl VorpalApp {
                 if let Ok(wat) = cache.analyses[self.saved.selected_function].compile_to_wat(&func_name) {
                     if let Some(path) = rfd::FileDialog::new()
                         .set_title("Save .wat file")
-                        .set_file_name(format!("{}.wat", self.saved.selected_function))
+                        .set_file_name(format!("{}.wat", func_name))
                         .save_file()
                     {
                         if let Err(e) = std::fs::write(path, &wat) {
