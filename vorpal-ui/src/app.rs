@@ -4,7 +4,7 @@ use std::{
     time::Instant,
 };
 
-use eframe::egui::{self, TextEdit};
+use eframe::egui::{self, Layout, TextEdit};
 use ndarray::*;
 use vorpal_core::{ndarray, ExternInputId, ExternParameters, Value};
 
@@ -39,6 +39,7 @@ pub struct VorpalApp {
     autosave_timer: Instant,
     engine: Option<VorpalWasmtime>,
     single_step: bool,
+    focused: bool,
 }
 
 const AUTOSAVE_INTERVAL_SECS: f32 = 30.0;
@@ -94,6 +95,7 @@ impl Default for VorpalApp {
             image_data: NdArray::zeros(vec![200, 200, 4]),
             // Start with a single step, in order to show the initial texture...
             single_step: true,
+            focused: false,
         }
     }
 }
@@ -229,8 +231,8 @@ impl eframe::App for VorpalApp {
                 ui.checkbox(&mut self.saved.pause, "Pause");
                 if ui.button("Reset").clicked() {
                     self.engine = None;
-
                 }
+                ui.checkbox(&mut self.focused, "Focused");
                 //});
 
                 let filename_text = match self.saved.user_wasm_path.as_ref() {
@@ -252,68 +254,76 @@ impl eframe::App for VorpalApp {
                 //ui.menu_button(filename_text, |_| ());
             });
         });
-        egui::SidePanel::left("nodes").show(ctx, |ui| {
-            self.saved.selected_fn_widget().show(ui);
-        });
-        egui::SidePanel::right("options").show(ctx, |ui| {
-            // Function name editor
-            let mut remove: Option<usize> = None;
 
-            for (idx, (function_name, _)) in self.saved.functions.iter_mut().enumerate() {
-                ui.horizontal(|ui| {
-                    // Edit function name
-                    ui.add(TextEdit::singleline(function_name).desired_width(100.));
+        if !self.focused {
+            egui::SidePanel::left("nodes").show(ctx, |ui| {
+                self.saved.selected_fn_widget().show(ui);
+            });
+            egui::SidePanel::right("options").show(ctx, |ui| {
+                // Function name editor
+                let mut remove: Option<usize> = None;
 
-                    // Deletion
-                    if ui.button("Delete").clicked() {
-                        remove = Some(idx);
-                    }
+                for (idx, (function_name, _)) in self.saved.functions.iter_mut().enumerate() {
+                    ui.horizontal(|ui| {
+                        // Edit function name
+                        ui.add(TextEdit::singleline(function_name).desired_width(100.));
 
-                    // Selection
-                    if ui
-                        .selectable_label(self.saved.selected_function == idx, "Select")
-                        .clicked()
-                    {
-                        self.saved.selected_function = idx;
-                    }
-                });
-            }
-            if ui.button("New").clicked() {
-                self.saved.selected_function = self.saved.functions.len();
+                        // Deletion
+                        if ui.button("Delete").clicked() {
+                            remove = Some(idx);
+                        }
 
-                self.saved
-                    .functions
-                    .push(("unnamed".into(), NodeGraphWidget::new(default_inputs())));
-            }
+                        // Selection
+                        if ui
+                            .selectable_label(self.saved.selected_function == idx, "Select")
+                            .clicked()
+                        {
+                            self.saved.selected_function = idx;
+                        }
+                    });
+                }
+                if ui.button("New").clicked() {
+                    self.saved.selected_function = self.saved.functions.len();
 
-            if let Some(idx) = remove {
-                self.saved.functions.remove(idx);
-            }
+                    self.saved
+                        .functions
+                        .push(("unnamed".into(), NodeGraphWidget::new(default_inputs())));
+                }
 
-            ui.separator();
+                if let Some(idx) = remove {
+                    self.saved.functions.remove(idx);
+                }
 
-            ui.checkbox(&mut self.saved.show_wat, "Show .wat");
-            if self.saved.show_wat {
-                egui::ScrollArea::vertical().show(ui, |ui| {
-                    // Show wasm code
-                    let mut text = self
-                        .engine
-                        .as_ref()
-                        .and_then(|engine| engine.cache.as_ref())
-                        .and_then(|cache| {
-                            cache.analyses[self.saved.selected_function]
-                                .compile_to_wat(
-                                    &self.saved.functions[self.saved.selected_function].0,
-                                )
-                                .ok()
-                        })
-                        .unwrap_or("No function".to_string());
-                    ui.code_editor(&mut text);
-                });
-            }
-        });
+                ui.separator();
+
+                ui.checkbox(&mut self.saved.show_wat, "Show .wat");
+                if self.saved.show_wat {
+                    egui::ScrollArea::vertical().show(ui, |ui| {
+                        // Show wasm code
+                        let mut text = self
+                            .engine
+                            .as_ref()
+                            .and_then(|engine| engine.cache.as_ref())
+                            .and_then(|cache| {
+                                cache.analyses[self.saved.selected_function]
+                                    .compile_to_wat(
+                                        &self.saved.functions[self.saved.selected_function].0,
+                                    )
+                                    .ok()
+                            })
+                            .unwrap_or("No function".to_string());
+                        ui.code_editor(&mut text);
+                    });
+                }
+            });
+        }
+
         egui::CentralPanel::default().show(ctx, |ui| {
-            let response = self.image.show(ui);
+            let response = ui.with_layout(
+                Layout::centered_and_justified(egui::Direction::LeftToRight),
+                |ui| self.image.show(ui),
+            ).inner;
+
             if response.clicked() | response.dragged() {
                 let cursor_pos = response
                     .interact_pointer_pos()
