@@ -38,6 +38,7 @@ pub struct VorpalApp {
 
     autosave_timer: Instant,
     engine: Option<VorpalWasmtime>,
+    single_step: bool,
 }
 
 const AUTOSAVE_INTERVAL_SECS: f32 = 30.0;
@@ -90,7 +91,9 @@ impl Default for VorpalApp {
             time: Instant::now(),
             autosave_timer: Instant::now(),
             image: Default::default(),
-            image_data: NdArray::zeros(vec![100, 100, 4]),
+            image_data: NdArray::zeros(vec![200, 200, 4]),
+            // Start with a single step, in order to show the initial texture...
+            single_step: true,
         }
     }
 }
@@ -127,7 +130,7 @@ impl eframe::App for VorpalApp {
     /// Called each time the UI needs repainting, which may be many times per second.
     /// Put your widgets into a `SidePanel`, `TopPanel`, `CentralPanel`, `Window` or `Area`.
     fn update(&mut self, ctx: &egui::Context, frame: &mut eframe::Frame) {
-        if !self.saved.pause {
+        if !self.saved.pause || self.single_step {
             // Load wasm file if unloaded
             if self.engine.is_none() {
                 if let Some(path) = &self.saved.user_wasm_path {
@@ -194,6 +197,8 @@ impl eframe::App for VorpalApp {
                 &ExternInputId::new(vorpal_ui::TIME_KEY.to_string()),
                 Value::Scalar(self.time.elapsed().as_secs_f32()),
             );
+
+            self.single_step = false;
         }
 
         egui::TopBottomPanel::top("top").show(ctx, |ui| {
@@ -217,6 +222,10 @@ impl eframe::App for VorpalApp {
                     }
                 });
                 //ui.menu_button("Control", |ui| {
+                if ui.button("Single step").clicked() {
+                    self.saved.pause = true;
+                    self.single_step = true;
+                }
                 ui.checkbox(&mut self.saved.pause, "Pause");
                 if ui.button("Reset").clicked() {
                     self.engine = None;
