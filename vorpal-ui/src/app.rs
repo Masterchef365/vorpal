@@ -25,6 +25,7 @@ pub struct SaveState {
     selected_function: usize,
     show_wat: bool,
     pause: bool,
+    focused: bool,
 }
 
 pub struct VorpalApp {
@@ -39,7 +40,6 @@ pub struct VorpalApp {
     autosave_timer: Instant,
     engine: Option<VorpalWasmtime>,
     single_step: bool,
-    focused: bool,
 }
 
 const AUTOSAVE_INTERVAL_SECS: f32 = 30.0;
@@ -80,6 +80,7 @@ impl Default for SaveState {
             selected_function: 0,
             show_wat: false,
             pause: false,
+            focused: false,
         }
     }
 }
@@ -95,7 +96,6 @@ impl Default for VorpalApp {
             image_data: NdArray::zeros(vec![200, 200, 4]),
             // Start with a single step, in order to show the initial texture...
             single_step: true,
-            focused: false,
         }
     }
 }
@@ -232,7 +232,7 @@ impl eframe::App for VorpalApp {
                 if ui.button("Reset").clicked() {
                     self.engine = None;
                 }
-                ui.checkbox(&mut self.focused, "Focused");
+                ui.checkbox(&mut self.saved.focused, "Focused");
                 //});
 
                 let filename_text = match self.saved.user_wasm_path.as_ref() {
@@ -255,7 +255,7 @@ impl eframe::App for VorpalApp {
             });
         });
 
-        if !self.focused {
+        if !self.saved.focused {
             egui::SidePanel::left("nodes").show(ctx, |ui| {
                 self.saved.selected_fn_widget().show(ui);
             });
