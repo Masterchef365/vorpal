@@ -4,13 +4,13 @@ use std::cell::RefCell;
 extern "C" {
     fn kernel(
         ptr: *mut f32,
-        width: f32,
-        height: f32,
-        x: f32,
-        y: f32,
-        time: f32,
         cursor_x: f32,
         cursor_y: f32,
+        position_x: f32,
+        position_y: f32,
+        width: f32,
+        height: f32,
+        time: f32,
     );
 }
 
@@ -27,13 +27,13 @@ pub fn call_kernel(
     unsafe {
         kernel(
             out_data.as_mut_ptr(),
-            width,
-            height,
-            x,
-            y,
-            time,
             cursor_x,
             cursor_y,
+            x,
+            y,
+            width,
+            height,
+            time,
         );
     }
 
