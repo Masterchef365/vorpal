@@ -222,12 +222,6 @@ impl NodeTemplateIter for AllMyNodeTemplates<'_> {
             types.push(MyNodeTemplate::GetComponent(dtype));
             types.push(MyNodeTemplate::ComponentFn(ComponentFn::NaturalLog, dtype));
             types.push(MyNodeTemplate::Dot(dtype));
-
-            // Special "New input" button. Creates input of any key
-            types.push(MyNodeTemplate::Input(
-                ExternInputId::new("<New input>".to_string()),
-                dtype,
-            ));
         }
 
         for (id, dtype) in self.params.inputs() {
