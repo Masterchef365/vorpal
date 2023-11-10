@@ -4,6 +4,8 @@ use std::{
     time::Instant,
 };
 
+use anyhow::format_err;
+
 use eframe::egui::{self, ComboBox, Layout, TextEdit, Ui};
 use ndarray::*;
 use vorpal_core::{ndarray, DataType, ExternInputId, ExternParameters, ParameterList, Value, Vec2};
@@ -340,7 +342,9 @@ impl eframe::App for VorpalApp {
 
                 ui.horizontal(|ui| {
                     if ui.button("Add").clicked() {
-                        param_list.0.insert(ExternInputId::new(self.add_param.clone()), self.add_dtype);
+                        param_list
+                            .0
+                            .insert(ExternInputId::new(self.add_param.clone()), self.add_dtype);
                     }
                     ui.text_edit_singleline(&mut self.add_param);
                     dtype_selector(0, ui, &mut self.add_dtype)
@@ -355,16 +359,24 @@ impl eframe::App for VorpalApp {
                         let mut text = self
                             .engine
                             .as_ref()
-                            .and_then(|engine| engine.cache.as_ref())
-                            .and_then(|cache| cache.analyses.get(self.saved.selected_function))
+                            .ok_or(format_err!("No engine"))
+                            .and_then(|engine| {
+                                engine.cache.as_ref().ok_or(format_err!("Nothing cached"))
+                            })
+                            .and_then(|cache| {
+                                cache
+                                    .analyses
+                                    .get(self.saved.selected_function)
+                                    .ok_or(format_err!("Nothing selected"))
+                            })
                             .and_then(|analysis| {
                                 analysis
                                     .compile_to_wat(
                                         &self.saved.functions[self.saved.selected_function].0,
                                     )
-                                    .ok()
+                                    .map_err(|e| format_err!("Compilation failed {:?}", e))
                             })
-                            .unwrap_or("No function".to_string());
+                            .unwrap_or_else(|err| err.to_string());
                         ui.add(
                             TextEdit::multiline(&mut text)
                                 .code_editor()
