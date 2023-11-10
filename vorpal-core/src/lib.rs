@@ -62,6 +62,11 @@ pub enum EvalError {
     BadInputId(ExternInputId),
 }
 
+/// Names and corresponding datatype for each parameter
+#[cfg_attr(feature = "persistence", derive(serde::Serialize, serde::Deserialize))]
+#[derive(Debug, Clone, Default)]
+pub struct ParameterList(pub HashMap<ExternInputId, DataType>);
+
 /// Unique name of external value input
 #[cfg_attr(feature = "persistence", derive(serde::Serialize, serde::Deserialize))]
 #[derive(Clone, Debug, PartialEq, Eq, Hash)]
@@ -94,7 +99,6 @@ pub struct Sampler(NdArray<f32>, DataType, DataType);
 #[derive(Default, Debug)]
 pub struct ExternParameters {
     pub inputs: HashMap<ExternInputId, Value>,
-    pub samplers: HashMap<ExternSamplerId, Sampler>,
 }
 
 impl DataType {
@@ -333,19 +337,12 @@ impl ExternSamplerId {
 }
 
 impl ExternParameters {
-    pub fn new(
-        inputs: HashMap<ExternInputId, Value>,
-        samplers: HashMap<ExternSamplerId, Sampler>,
-    ) -> Self {
-        Self { inputs, samplers }
+    pub fn new(inputs: HashMap<ExternInputId, Value>) -> Self {
+        Self { inputs }
     }
 
     pub fn inputs(&self) -> &HashMap<ExternInputId, Value> {
         &self.inputs
-    }
-
-    pub fn samplers(&self) -> &HashMap<ExternSamplerId, Sampler> {
-        &self.samplers
     }
 
     pub fn insert_input(&mut self, id: &ExternInputId, value: Value) {
@@ -388,5 +385,22 @@ impl Value {
             i += 1;
             result
         })
+    }
+}
+
+impl ParameterList {
+    pub fn inputs(&self) -> &HashMap<ExternInputId, DataType> {
+        &self.0
+    }
+}
+
+impl ExternParameters {
+    pub fn build_parameter_list(&self) -> ParameterList {
+        ParameterList(
+            self.inputs()
+                .iter()
+                .map(|(id, value)| (id.clone(), value.dtype()))
+                .collect(),
+        )
     }
 }

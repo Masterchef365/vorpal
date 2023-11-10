@@ -6,7 +6,7 @@ use std::{
 
 use eframe::egui::{self, Layout, TextEdit};
 use ndarray::*;
-use vorpal_core::{ndarray, ExternInputId, ExternParameters, Value};
+use vorpal_core::{ndarray, ExternInputId, ExternParameters, Value, DataType, ParameterList, Vec2};
 
 use vorpal_ui::wasmtime_integration::{NodeGraphs, VorpalWasmtime};
 use vorpal_widgets::{
@@ -40,40 +40,41 @@ pub struct VorpalApp {
     autosave_timer: Instant,
     engine: Option<VorpalWasmtime>,
     single_step: bool,
+
+    /// Cursor pos relative to the image size (in units of image's pixels)
+    cursor_pos: Option<Vec2>,
 }
 
 const AUTOSAVE_INTERVAL_SECS: f32 = 30.0;
 
-fn default_inputs() -> ExternParameters {
-    let inputs = [
+fn image_fn_inputs() -> ParameterList {
+    let params = [
         (
             ExternInputId::new(vorpal_ui::TIME_KEY.to_string()),
-            Value::Scalar(0.1),
+            DataType::Scalar,
         ),
         (
             ExternInputId::new(vorpal_ui::POS_KEY.to_string()),
-            Value::Vec2([0.; 2]),
+            DataType::Vec2,
         ),
         (
             ExternInputId::new(vorpal_ui::RESOLUTION_KEY.to_string()),
-            Value::Vec2([1.; 2]),
+            DataType::Vec2,
         ),
         (
             ExternInputId::new(vorpal_ui::CURSOR_KEY.to_string()),
-            Value::Vec2([-1.; 2]),
+            DataType::Vec2,
         ),
     ]
     .into_iter()
     .collect();
-    ExternParameters {
-        inputs,
-        samplers: Default::default(),
-    }
+
+    ParameterList(params)
 }
 
 impl Default for SaveState {
     fn default() -> Self {
-        let nodes = NodeGraphWidget::new(default_inputs());
+        let nodes = NodeGraphWidget::new(image_fn_inputs());
         Self {
             user_wasm_path: Some("target/wasm32-unknown-unknown/release/vorpal_image.wasm".into()),
             functions: [("kernel".to_string(), nodes)].into_iter().collect(),
@@ -96,6 +97,7 @@ impl Default for VorpalApp {
             image_data: NdArray::zeros(vec![200, 200, 4]),
             // Start with a single step, in order to show the initial texture...
             single_step: true,
+            cursor_pos: None,
         }
     }
 }
@@ -162,10 +164,21 @@ impl eframe::App for VorpalApp {
             let width = self.image_data.shape()[0];
             let height = self.image_data.shape()[1];
 
-            self.saved.selected_fn_widget().context_mut().insert_input(
-                &ExternInputId::new(vorpal_ui::RESOLUTION_KEY.into()),
-                Value::Vec2([width as f32, height as f32]),
-            );
+            let extern_parameters = [
+                (
+                    ExternInputId::new(vorpal_ui::RESOLUTION_KEY.into()),
+                    Value::Vec2([width as f32, height as f32]),
+                ),
+                (
+                    ExternInputId::new(vorpal_ui::CURSOR_KEY.into()),
+                    Value::Vec2(self.cursor_pos.unwrap_or([-1., -1.]).into()),
+                ),
+                (
+                    ExternInputId::new(vorpal_ui::TIME_KEY.to_string()),
+                    Value::Scalar(self.time.elapsed().as_secs_f32()),
+                )
+            ];
+            let extern_parameters = ExternParameters::new(extern_parameters.into_iter().collect());
 
             // Paint image using native backend
             //if let Ok(Some(node)) = self.saved.nodes.extract_active_node() {
@@ -177,7 +190,7 @@ impl eframe::App for VorpalApp {
                 .collect();
 
             if let Some(engine) = self.engine.as_mut() {
-                match engine.eval_image(&nodes, self.saved.selected_fn_widget().context()) {
+                match engine.eval_image(&nodes, &extern_parameters) {
                     Ok(image_data) => {
                         self.image_data.data_mut().copy_from_slice(&image_data);
                     }
@@ -194,11 +207,6 @@ impl eframe::App for VorpalApp {
 
             self.image
                 .set_image("my image".into(), ctx, array_to_imagedata(&self.image_data));
-
-            self.saved.selected_fn_widget().context_mut().insert_input(
-                &ExternInputId::new(vorpal_ui::TIME_KEY.to_string()),
-                Value::Scalar(self.time.elapsed().as_secs_f32()),
-            );
 
             self.single_step = false;
         }
@@ -287,7 +295,7 @@ impl eframe::App for VorpalApp {
 
                     self.saved
                         .functions
-                        .push(("unnamed".into(), NodeGraphWidget::new(default_inputs())));
+                        .push(("unnamed".into(), NodeGraphWidget::new(image_fn_inputs())));
                 }
 
                 if let Some(idx) = remove {
@@ -333,10 +341,7 @@ impl eframe::App for VorpalApp {
                 let image_size_vect = egui::Vec2::new(image_shape[0] as f32, image_shape[1] as f32);
                 let pixel_pos = image_size_vect * rel_pos / response.rect.size();
 
-                self.saved.selected_fn_widget().context_mut().insert_input(
-                    &ExternInputId::new(vorpal_ui::CURSOR_KEY.into()),
-                    Value::Vec2(pixel_pos.into()),
-                );
+                self.cursor_pos = Some(pixel_pos.into());
             }
         });
     }
@@ -416,7 +421,7 @@ impl SaveState {
         if self.functions.is_empty() {
             self.functions.push((
                 "unnamed".to_string(),
-                NodeGraphWidget::new(default_inputs()),
+                NodeGraphWidget::new(image_fn_inputs()),
             ));
         }
 

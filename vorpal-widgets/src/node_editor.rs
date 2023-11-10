@@ -9,10 +9,6 @@ use vorpal_core::*;
 
 const XYZW: [&str; 4] = ["x", "y", "z", "w"];
 
-#[cfg_attr(feature = "persistence", derive(serde::Serialize, serde::Deserialize))]
-#[derive(Debug, Clone)]
-pub struct ParameterList(HashMap<String, DataType>);
-
 /// Widget allowing the user to interactively design
 /// a function using a node and connection paradigm
 #[cfg_attr(feature = "persistence", derive(serde::Serialize, serde::Deserialize))]
@@ -206,7 +202,7 @@ impl NodeTemplateTrait for MyNodeTemplate {
 }
 
 struct AllMyNodeTemplates<'ctx> {
-    ctx: &'ctx ExternParameters,
+    params: &'ctx ParameterList,
 }
 
 impl NodeTemplateIter for AllMyNodeTemplates<'_> {
@@ -226,10 +222,16 @@ impl NodeTemplateIter for AllMyNodeTemplates<'_> {
             types.push(MyNodeTemplate::GetComponent(dtype));
             types.push(MyNodeTemplate::ComponentFn(ComponentFn::NaturalLog, dtype));
             types.push(MyNodeTemplate::Dot(dtype));
+
+            // Special "New input" button. Creates input of any key
+            types.push(MyNodeTemplate::Input(
+                ExternInputId::new("<New input>".to_string()),
+                dtype,
+            ));
         }
 
-        for (id, value) in self.ctx.inputs() {
-            types.push(MyNodeTemplate::Input(id.clone(), value.dtype()));
+        for (id, dtype) in self.params.inputs() {
+            types.push(MyNodeTemplate::Input(id.clone(), *dtype));
         }
 
         types
@@ -516,7 +518,7 @@ impl Default for NodeGuiValue {
 
 impl NodeGraphWidget {
     /// Create a new nodegraph widget with the given input list
-    pub fn new(context: ExternParameters) -> Self {
+    pub fn new(params: ParameterList) -> Self {
         let mut state: MyEditorState = MyEditorState::default();
         let mut user_state: MyGraphState = Default::default();
 
@@ -532,7 +534,7 @@ impl NodeGraphWidget {
         MyNodeTemplate::Output(DataType::Vec4).build_node(&mut state.graph, &mut user_state, id);
 
         Self {
-            params: context,
+            params,
             state,
             user_state,
         }
@@ -546,11 +548,11 @@ impl NodeGraphWidget {
         self.state = state;
     }
 
-    pub fn context(&self) -> &ExternParameters {
+    pub fn params(&self) -> &ParameterList {
         &self.params
     }
 
-    pub fn context_mut(&mut self) -> &mut ExternParameters {
+    pub fn params_mut(&mut self) -> &mut ParameterList {
         &mut self.params
     }
 
@@ -558,7 +560,9 @@ impl NodeGraphWidget {
         let before: HashSet<InputId> = self.state.graph.connections.keys().collect();
         let resp = self.state.draw_graph_editor(
             ui,
-            AllMyNodeTemplates { ctx: &self.params },
+            AllMyNodeTemplates {
+                params: &self.params,
+            },
             &mut self.user_state,
             Vec::default(),
         );
