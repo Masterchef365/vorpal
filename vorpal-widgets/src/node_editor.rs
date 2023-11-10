@@ -358,6 +358,7 @@ impl NodeDataTrait for MyNodeData {
             .map(|id| id == node_id)
             .unwrap_or(false);
 
+        /*
         // Pressing the button will emit a custom user response to either set,
         // or clear the active node. These responses do nothing by themselves,
         // the library only makes the responses available to you after the graph
@@ -374,6 +375,7 @@ impl NodeDataTrait for MyNodeData {
                 responses.push(NodeResponse::User(MyResponse::ClearActiveNode));
             }
         }
+        */
 
         responses
     }
