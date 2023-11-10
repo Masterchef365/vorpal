@@ -9,11 +9,15 @@ use vorpal_core::*;
 
 const XYZW: [&str; 4] = ["x", "y", "z", "w"];
 
+#[cfg_attr(feature = "persistence", derive(serde::Serialize, serde::Deserialize))]
+#[derive(Debug, Clone)]
+pub struct ParameterList(HashMap<String, DataType>);
+
 /// Widget allowing the user to interactively design
 /// a function using a node and connection paradigm
 #[cfg_attr(feature = "persistence", derive(serde::Serialize, serde::Deserialize))]
 pub struct NodeGraphWidget {
-    context: ExternParameters,
+    params: ParameterList,
     state: MyEditorState,
     user_state: MyGraphState,
 }
@@ -528,7 +532,7 @@ impl NodeGraphWidget {
         MyNodeTemplate::Output(DataType::Vec4).build_node(&mut state.graph, &mut user_state, id);
 
         Self {
-            context,
+            params: context,
             state,
             user_state,
         }
@@ -543,18 +547,18 @@ impl NodeGraphWidget {
     }
 
     pub fn context(&self) -> &ExternParameters {
-        &self.context
+        &self.params
     }
 
     pub fn context_mut(&mut self) -> &mut ExternParameters {
-        &mut self.context
+        &mut self.params
     }
 
     pub fn show(&mut self, ui: &mut Ui) {
         let before: HashSet<InputId> = self.state.graph.connections.keys().collect();
         let resp = self.state.draw_graph_editor(
             ui,
-            AllMyNodeTemplates { ctx: &self.context },
+            AllMyNodeTemplates { ctx: &self.params },
             &mut self.user_state,
             Vec::default(),
         );
