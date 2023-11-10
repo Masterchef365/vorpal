@@ -43,6 +43,8 @@ pub struct VorpalApp {
 
     /// Cursor pos relative to the image size (in units of image's pixels)
     cursor_pos: Option<Vec2>,
+    add_dtype: DataType,
+    add_param: String,
 }
 
 const AUTOSAVE_INTERVAL_SECS: f32 = 30.0;
@@ -98,6 +100,8 @@ impl Default for VorpalApp {
             // Start with a single step, in order to show the initial texture...
             single_step: true,
             cursor_pos: None,
+            add_dtype: DataType::Scalar,
+            add_param: "my_new_param".into(),
         }
     }
 }
@@ -319,12 +323,28 @@ impl eframe::App for VorpalApp {
                 let mut ordered: Vec<ExternInputId> = param_list.0.keys().cloned().collect();
                 ordered.sort();
 
+                let mut delete = None;
                 for (idx, id) in ordered.iter().enumerate() {
                     ui.horizontal(|ui| {
                         ui.label(id.to_string());
                         dtype_selector(idx, ui, param_list.0.get_mut(id).unwrap());
+                        if ui.button("delete").clicked() {
+                            delete = Some(idx);
+                        }
                     });
                 }
+
+                if let Some(idx) = delete {
+                    param_list.0.remove(&ordered[idx]);
+                }
+
+                ui.horizontal(|ui| {
+                    if ui.button("Add").clicked() {
+                        param_list.0.insert(ExternInputId::new(self.add_param.clone()), self.add_dtype);
+                    }
+                    ui.text_edit_singleline(&mut self.add_param);
+                    dtype_selector(0, ui, &mut self.add_dtype)
+                });
 
                 ui.separator();
 
