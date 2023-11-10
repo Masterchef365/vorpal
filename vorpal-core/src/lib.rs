@@ -69,7 +69,7 @@ pub struct ParameterList(pub HashMap<ExternInputId, DataType>);
 
 /// Unique name of external value input
 #[cfg_attr(feature = "persistence", derive(serde::Serialize, serde::Deserialize))]
-#[derive(Clone, Debug, PartialEq, Eq, Hash)]
+#[derive(Clone, Debug, PartialEq, Eq, Hash, PartialOrd, Ord)]
 pub struct ExternInputId(String);
 
 /// Unique name of external sampler input

@@ -4,7 +4,7 @@ use std::{
     time::Instant,
 };
 
-use eframe::egui::{self, Layout, TextEdit};
+use eframe::egui::{self, Layout, TextEdit, Ui, ComboBox};
 use ndarray::*;
 use vorpal_core::{ndarray, ExternInputId, ExternParameters, Value, DataType, ParameterList, Vec2};
 
@@ -308,6 +308,17 @@ impl eframe::App for VorpalApp {
 
                 ui.strong("Selected function parameters");
 
+                let param_list = self.saved.selected_fn_widget().params_mut();
+
+                let mut ordered: Vec<ExternInputId> = param_list.0.keys().cloned().collect();
+                ordered.sort();
+
+                for (idx, id) in ordered.iter().enumerate() {
+                    ui.horizontal(|ui| {
+                        ui.label(id.to_string());
+                        dtype_selector(idx, ui, param_list.0.get_mut(id).unwrap());
+                    });
+                }
 
                 ui.separator();
 
@@ -436,4 +447,12 @@ impl SaveState {
 
         &mut self.functions[self.selected_function].1
     }
+}
+
+fn dtype_selector(idx: usize, ui: &mut Ui, dtype: &mut DataType) {
+    ComboBox::new((idx, "dtype selector"), "").selected_text(dtype.to_string()).show_ui(ui, |ui| {
+        for alt_dtype in DataType::all() {
+            ui.selectable_value(dtype, alt_dtype, alt_dtype.to_string());
+        }
+    });
 }
