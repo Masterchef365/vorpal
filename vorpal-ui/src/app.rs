@@ -4,9 +4,9 @@ use std::{
     time::Instant,
 };
 
-use eframe::egui::{self, Layout, TextEdit, Ui, ComboBox};
+use eframe::egui::{self, ComboBox, Layout, TextEdit, Ui};
 use ndarray::*;
-use vorpal_core::{ndarray, ExternInputId, ExternParameters, Value, DataType, ParameterList, Vec2};
+use vorpal_core::{ndarray, DataType, ExternInputId, ExternParameters, ParameterList, Value, Vec2};
 
 use vorpal_ui::wasmtime_integration::{NodeGraphs, VorpalWasmtime};
 use vorpal_widgets::{
@@ -176,7 +176,7 @@ impl eframe::App for VorpalApp {
                 (
                     ExternInputId::new(vorpal_ui::TIME_KEY.to_string()),
                     Value::Scalar(self.time.elapsed().as_secs_f32()),
-                )
+                ),
             ];
             let extern_parameters = ExternParameters::new(extern_parameters.into_iter().collect());
 
@@ -330,25 +330,32 @@ impl eframe::App for VorpalApp {
                             .engine
                             .as_ref()
                             .and_then(|engine| engine.cache.as_ref())
-                            .and_then(|cache| {
-                                cache.analyses[self.saved.selected_function]
+                            .and_then(|cache| cache.analyses.get(self.saved.selected_function))
+                            .and_then(|analysis| {
+                                analysis
                                     .compile_to_wat(
                                         &self.saved.functions[self.saved.selected_function].0,
                                     )
                                     .ok()
                             })
                             .unwrap_or("No function".to_string());
-                        ui.code_editor(&mut text);
+                        ui.add(
+                            TextEdit::multiline(&mut text)
+                                .code_editor()
+                                .desired_width(f32::INFINITY),
+                        );
                     });
                 }
             });
         }
 
         egui::CentralPanel::default().show(ctx, |ui| {
-            let response = ui.with_layout(
-                Layout::centered_and_justified(egui::Direction::LeftToRight),
-                |ui| self.image.show(ui),
-            ).inner;
+            let response = ui
+                .with_layout(
+                    Layout::centered_and_justified(egui::Direction::LeftToRight),
+                    |ui| self.image.show(ui),
+                )
+                .inner;
 
             if response.clicked() | response.dragged() {
                 let cursor_pos = response
@@ -450,9 +457,11 @@ impl SaveState {
 }
 
 fn dtype_selector(idx: usize, ui: &mut Ui, dtype: &mut DataType) {
-    ComboBox::new((idx, "dtype selector"), "").selected_text(dtype.to_string()).show_ui(ui, |ui| {
-        for alt_dtype in DataType::all() {
-            ui.selectable_value(dtype, alt_dtype, alt_dtype.to_string());
-        }
-    });
+    ComboBox::new((idx, "dtype selector"), "")
+        .selected_text(dtype.to_string())
+        .show_ui(ui, |ui| {
+            for alt_dtype in DataType::all() {
+                ui.selectable_value(dtype, alt_dtype, alt_dtype.to_string());
+            }
+        });
 }
