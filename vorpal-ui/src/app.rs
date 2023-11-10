@@ -347,7 +347,7 @@ impl eframe::App for VorpalApp {
                             .insert(ExternInputId::new(self.add_param.clone()), self.add_dtype);
                     }
                     ui.text_edit_singleline(&mut self.add_param);
-                    dtype_selector(0, ui, &mut self.add_dtype)
+                    dtype_selector(99999, ui, &mut self.add_dtype)
                 });
 
                 ui.separator();
