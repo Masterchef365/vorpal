@@ -186,7 +186,13 @@ impl eframe::App for VorpalApp {
                 .saved
                 .functions
                 .iter_mut()
-                .map(|(name, widget)| (name.clone(), widget.extract_output_node()))
+                .map(|(name, widget)| {
+                    (
+                        name.clone(),
+                        widget.extract_output_node(),
+                        widget.params().clone(),
+                    )
+                })
                 .collect();
 
             if let Some(engine) = self.engine.as_mut() {
