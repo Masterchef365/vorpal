@@ -268,6 +268,8 @@ impl eframe::App for VorpalApp {
                 self.saved.selected_fn_widget().show(ui);
             });
             egui::SidePanel::right("options").show(ctx, |ui| {
+                ui.strong("Functions");
+
                 // Function name editor
                 let mut remove: Option<usize> = None;
 
@@ -301,6 +303,11 @@ impl eframe::App for VorpalApp {
                 if let Some(idx) = remove {
                     self.saved.functions.remove(idx);
                 }
+
+                ui.separator();
+
+                ui.strong("Selected function parameters");
+
 
                 ui.separator();
 
