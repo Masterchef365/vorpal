@@ -382,6 +382,7 @@ impl VorpalApp {
     pub fn load_user_wasm_file(&mut self) {
         if let Some(path) = rfd::FileDialog::new()
             .set_title("Load .wasm file")
+            .add_filter("wasm", &["wasm"])
             .pick_file()
         {
             self.saved.user_wasm_path = Some(path);
@@ -426,6 +427,7 @@ impl VorpalApp {
     pub fn load_vor_file(&mut self) {
         if let Some(path) = rfd::FileDialog::new()
             .set_title("Open .vor file")
+            .add_filter("vor", &["vor"])
             .pick_file()
         {
             self.saved = SaveState::load_vor_file(path).unwrap();
