@@ -15,16 +15,15 @@ extern "C" {
 }
 
 pub fn call_kernel(
-    width: f32,
-    height: f32,
-    x: f32,
-    y: f32,
+    resolution: [f32; 2],
+    position: [f32; 2],
     time: f32,
-    cursor_x: f32,
-    cursor_y: f32,
+    cursor_pos: [f32; 2],
 ) -> [f32; 4] {
     let mut out_data = [0_f32; 4];
-
+    let [width, height] = resolution;
+    let [x, y] = position;
+    let [cursor_x, cursor_y] = cursor_pos;
     unsafe {
         kernel(
             out_data.as_mut_ptr(),
@@ -82,13 +81,10 @@ impl Plugin {
                 let [sx, sy] = [x, y].map(|v| v as f32);
 
                 let rgba = call_kernel(
-                    self.out_width as f32,
-                    self.out_height as f32,
-                    sx,
-                    sy,
+                    [self.out_width as f32, self.out_height as f32],
+                    [sx, sy],
                     time,
-                    cursor_x,
-                    cursor_y,
+                    [cursor_x, cursor_y],
                 );
 
                 let idx = 4 * (y * self.out_width + x) as usize;
