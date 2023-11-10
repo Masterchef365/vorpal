@@ -1,4 +1,4 @@
-use anyhow::Result;
+use anyhow::{ensure, Result};
 use std::collections::{HashMap, HashSet};
 use std::fmt::Write;
 use std::hash::{Hash, Hasher};
@@ -94,7 +94,12 @@ impl CodeAnalysis {
                             self.input_to_var.get(input_name)
                         {
                             // External input parameter
-                            assert_eq!(expected_dtype, input_dtype);
+                            ensure!(
+                                expected_dtype == input_dtype,
+                                "Datatype mismatch; expected {} got {}",
+                                expected_dtype,
+                                input_dtype
+                            );
                             write!(&mut param_list_text, "(param ${input_var_id}_{lane} f32) ")
                                 .unwrap();
                             input_var_ids.insert(input_var_id);
