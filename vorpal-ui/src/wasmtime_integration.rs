@@ -34,7 +34,7 @@ pub struct CachedCompilation {
 }
 
 pub type FuncName = String;
-pub type NodeGraphs = Vec<(FuncName, Rc<Node>)>;
+pub type NodeGraphs = Vec<(FuncName, Rc<Node>, ParameterList)>;
 
 impl VorpalWasmtime {
     pub fn new(wasm_path: PathBuf) -> Result<Self> {
@@ -124,9 +124,9 @@ impl VorpalWasmtime {
 
                 // Compile code
                 let mut analyses = vec![];
-                for (func_name, node) in nodes {
+                for (func_name, node, params) in nodes {
                     let (kernel_module, anal) = self
-                        .compile(&node, &input_list, &func_name)
+                        .compile(&node, &params, &func_name)
                         .with_context(|| format!("Compiling {func_name}()"))?;
                     linker.module(&mut store, &func_name, &kernel_module)?;
                     analyses.push(anal);
@@ -201,7 +201,7 @@ impl VorpalWasmtime {
     fn compile(
         &self,
         node: &Node,
-        input_list: &[(ExternInputId, DataType)],
+        input_list: &ParameterList,
         func_name: &str,
     ) -> Result<(Module, CodeAnalysis)> {
         let analysis = CodeAnalysis::new(Rc::new(node.clone()), input_list);
