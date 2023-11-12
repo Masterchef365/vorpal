@@ -122,7 +122,7 @@ impl Plugin {
         }
 
         // Move fluid and smoke
-        let dt = 1e-2;
+        let dt = 1e-1;
         let overstep = 1.9;
 
         self.fluid_sim.step(dt, overstep, 15);
@@ -164,6 +164,8 @@ impl Plugin {
 
         if cursor_x > 0. && cursor_y > 0. {
             self.last_cursor = Some([cursor_x, cursor_y]);
+        } else {
+            self.last_cursor = None;
         }
 
         &self.out_rgba
