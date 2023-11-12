@@ -3,6 +3,8 @@ Vorpal is a Domain Specific Language designed to be edited with a node graph use
 
 Vorpal's main purpose is to serve as a prototyping tool for physical simulations and interactive art; any high-performance, creative application may benefit from such a tool.
 
+![Demo of using Vorpal](demo.png)
+
 ## How it works
 The `vorpal-ui` application allows a user to edit a node graph, mapping a few scalar and vector inputs to exactly one vector output. The node graph is then compiled into WebAssembly, which is then linked with some user code and run in the `wasmtime` WebAssembly runtime. The results are displayed visually.
 
