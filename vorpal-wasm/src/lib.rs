@@ -11,6 +11,7 @@ pub const BUILTINS_WASM: &[u8] =
 /// Denotes the "name" of a local variable; e.g. local.get 9
 type LocalVarId = u32;
 
+#[derive(Debug)]
 pub enum InputParameter {
     ExternalVariable(ExternInputId, DataType),
     OutputPointer(LocalVarId),
@@ -193,12 +194,19 @@ impl CodeAnalysis {
             return *dtype;
         }
 
+        // NOTE: May or may not be used
         let new_id = self.gen_var_id();
 
         let dtype: DataType = match &*node_hash.0 {
             Node::ExternInput(name, dtype) => {
-                self.input_to_var.insert(name.clone(), (new_id, *dtype));
-                *dtype
+                if let Some((existing_id, _)) = self.input_to_var.get(&name) {
+                    // This input already exists. Stop before generating a new one!
+                    self.locals.insert(node_hash.clone(), (*existing_id, *dtype));
+                    return *dtype;
+                } else {
+                    self.input_to_var.insert(name.clone(), (new_id, *dtype));
+                    *dtype
+                }
             }
             // Depth-first search
             Node::ComponentInfixOp(a, _, b) => {
