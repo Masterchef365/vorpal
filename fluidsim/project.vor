@@ -5,10 +5,10 @@
       "add_velocity",
       {
         "params": {
-          "Resolution (pixels)": "Vec2",
           "Time (seconds)": "Scalar",
           "Position (pixels)": "Vec2",
           "Last cursor position (pixels)": "Vec2",
+          "Resolution (pixels)": "Vec2",
           "Cursor position (pixels)": "Vec2"
         },
         "state": {
@@ -2920,155 +2920,155 @@
               },
               {
                 "value": {
-                  "x": 33.61786,
-                  "y": 586.13257
+                  "x": -593.4922,
+                  "y": 530.23047
                 },
                 "version": 1
               },
               {
                 "value": {
-                  "x": -726.6045,
-                  "y": 547.8944
+                  "x": -2566.147,
+                  "y": 431.00867
                 },
                 "version": 1
               },
               {
                 "value": {
-                  "x": -717.8135,
-                  "y": 504.40488
+                  "x": -2543.3438,
+                  "y": 318.15747
                 },
                 "version": 1
               },
               {
                 "value": {
-                  "x": -620.058,
-                  "y": 493.4525
+                  "x": -2289.676,
+                  "y": 289.7383
                 },
                 "version": 1
               },
               {
                 "value": {
-                  "x": -533.641,
-                  "y": 516.03503
+                  "x": -2065.4353,
+                  "y": 348.33643
                 },
                 "version": 1
               },
               {
                 "value": {
-                  "x": -620.0497,
-                  "y": 544.54785
+                  "x": -2289.654,
+                  "y": 422.32336
                 },
                 "version": 1
               },
               {
                 "value": {
-                  "x": -454.08826,
-                  "y": 524.7461
+                  "x": -1859.0142,
+                  "y": 370.94153
                 },
                 "version": 1
               },
               {
                 "value": {
-                  "x": -730.46375,
-                  "y": 591.84045
+                  "x": -2576.1628,
+                  "y": 545.04315
                 },
                 "version": 1
               },
               {
                 "value": {
-                  "x": -616.72,
-                  "y": 572.26685
+                  "x": -2281.0098,
+                  "y": 494.24945
                 },
                 "version": 1
               },
               {
                 "value": {
-                  "x": -535.6229,
-                  "y": 567.543
+                  "x": -2070.58,
+                  "y": 481.99368
                 },
                 "version": 1
               },
               {
                 "value": {
-                  "x": -406.75995,
-                  "y": 533.44836
+                  "x": -1736.2073,
+                  "y": 393.52386
                 },
                 "version": 1
               },
               {
                 "value": {
-                  "x": -462.8896,
-                  "y": 618.2352
+                  "x": -1881.8525,
+                  "y": 613.53296
                 },
                 "version": 3
               },
               {
                 "value": {
-                  "x": -271.1026,
-                  "y": 565.9631
+                  "x": -1384.2007,
+                  "y": 477.89594
                 },
                 "version": 1
               },
               {
                 "value": {
-                  "x": -92.76422,
-                  "y": 548.80493
+                  "x": -921.4389,
+                  "y": 433.37018
                 },
                 "version": 1
               },
               {
                 "value": {
-                  "x": -92.31622,
-                  "y": 592.9407
+                  "x": -920.2744,
+                  "y": 547.89856
                 },
                 "version": 1
               },
               {
                 "value": {
-                  "x": -12.1362915,
-                  "y": 575.34546
+                  "x": -712.22174,
+                  "y": 502.24213
                 },
                 "version": 1
               },
               {
                 "value": {
-                  "x": -415.50787,
-                  "y": 607.0709
+                  "x": -1758.905,
+                  "y": 584.5638
                 },
                 "version": 3
               },
               {
                 "value": {
-                  "x": -357.9502,
-                  "y": 590.7893
+                  "x": -1609.5532,
+                  "y": 542.315
                 },
                 "version": 7
               },
               {
                 "value": {
-                  "x": -321.62628,
-                  "y": 551.8928
+                  "x": -1515.2972,
+                  "y": 441.38406
                 },
                 "version": 3
               },
               {
                 "value": {
-                  "x": -184.66992,
-                  "y": 572.0895
+                  "x": -1159.9174,
+                  "y": 493.79233
                 },
                 "version": 1
               },
               {
                 "value": {
-                  "x": -279.41602,
-                  "y": 629.0582
+                  "x": -1405.7726,
+                  "y": 641.6183
                 },
                 "version": 1
               },
               {
                 "value": {
-                  "x": -382.89954,
-                  "y": 652.82336
+                  "x": -1674.2926,
+                  "y": 703.287
                 },
                 "version": 3
               }
@@ -3078,10 +3078,10 @@
           "node_finder": null,
           "pan_zoom": {
             "pan": {
-              "x": 595.07794,
-              "y": -164.39462
+              "x": 1467.0513,
+              "y": -192.72272
             },
-            "zoom": 0.32576025
+            "zoom": 0.8453088
           },
           "_user_state": null
         },
@@ -3094,12 +3094,12 @@
       "get_color",
       {
         "params": {
-          "Cursor position (pixels)": "Vec2",
-          "Fluid velocity (pixels/frame)": "Vec2",
-          "Resolution (pixels)": "Vec2",
+          "Time (seconds)": "Scalar",
           "Position (pixels)": "Vec2",
-          "Smoke quantity": "Scalar",
-          "Time (seconds)": "Scalar"
+          "Cursor position (pixels)": "Vec2",
+          "Resolution (pixels)": "Vec2",
+          "Fluid velocity (pixels/frame)": "Vec2",
+          "Smoke quantity": "Scalar"
         },
         "state": {
           "graph": {
@@ -3247,40 +3247,142 @@
                   "version": 1
                 },
                 {
-                  "value": null,
-                  "version": 2
-                },
-                {
-                  "value": null,
-                  "version": 2
+                  "value": {
+                    "id": [
+                      {
+                        "idx": 4,
+                        "version": 3
+                      },
+                      280296801484134825416921407732658187779
+                    ],
+                    "label": "Operator (Scalar)",
+                    "inputs": [
+                      [
+                        "x",
+                        [
+                          {
+                            "idx": 12,
+                            "version": 1
+                          },
+                          339080615957657008497005651150171626532
+                        ]
+                      ],
+                      [
+                        "y",
+                        [
+                          {
+                            "idx": 13,
+                            "version": 1
+                          },
+                          339080615957657008497005651150171626532
+                        ]
+                      ]
+                    ],
+                    "outputs": [
+                      [
+                        "out",
+                        [
+                          {
+                            "idx": 3,
+                            "version": 3
+                          },
+                          4817772942625407149189657994357095993
+                        ]
+                      ]
+                    ],
+                    "user_data": {
+                      "template": {
+                        "ComponentInfixOp": [
+                          "Multiply",
+                          "Scalar"
+                        ]
+                      }
+                    }
+                  },
+                  "version": 3
                 },
                 {
                   "value": {
                     "id": [
                       {
-                        "idx": 6,
+                        "idx": 5,
                         "version": 3
                       },
                       280296801484134825416921407732658187779
                     ],
-                    "label": "Get component (Vec2)",
+                    "label": "Operator (Scalar)",
                     "inputs": [
                       [
-                        "value",
+                        "x",
                         [
                           {
-                            "idx": 9,
+                            "idx": 7,
                             "version": 3
                           },
                           339080615957657008497005651150171626532
                         ]
                       ],
                       [
-                        "index",
+                        "y",
+                        [
+                          {
+                            "idx": 6,
+                            "version": 3
+                          },
+                          339080615957657008497005651150171626532
+                        ]
+                      ]
+                    ],
+                    "outputs": [
+                      [
+                        "out",
+                        [
+                          {
+                            "idx": 4,
+                            "version": 3
+                          },
+                          4817772942625407149189657994357095993
+                        ]
+                      ]
+                    ],
+                    "user_data": {
+                      "template": {
+                        "ComponentInfixOp": [
+                          "Multiply",
+                          "Scalar"
+                        ]
+                      }
+                    }
+                  },
+                  "version": 3
+                },
+                {
+                  "value": {
+                    "id": [
+                      {
+                        "idx": 6,
+                        "version": 5
+                      },
+                      280296801484134825416921407732658187779
+                    ],
+                    "label": "Dot (Vec2)",
+                    "inputs": [
+                      [
+                        "x",
                         [
                           {
                             "idx": 8,
-                            "version": 3
+                            "version": 5
+                          },
+                          339080615957657008497005651150171626532
+                        ]
+                      ],
+                      [
+                        "y",
+                        [
+                          {
+                            "idx": 9,
+                            "version": 5
                           },
                           339080615957657008497005651150171626532
                         ]
@@ -3292,7 +3394,7 @@
                         [
                           {
                             "idx": 5,
-                            "version": 3
+                            "version": 5
                           },
                           4817772942625407149189657994357095993
                         ]
@@ -3300,39 +3402,39 @@
                     ],
                     "user_data": {
                       "template": {
-                        "GetComponent": "Vec2"
+                        "Dot": "Vec2"
                       }
                     }
                   },
-                  "version": 3
+                  "version": 5
                 },
                 {
                   "value": {
                     "id": [
                       {
                         "idx": 7,
-                        "version": 3
+                        "version": 5
                       },
                       280296801484134825416921407732658187779
                     ],
-                    "label": "Get component (Vec2)",
+                    "label": "Operator (Scalar)",
                     "inputs": [
                       [
-                        "value",
+                        "x",
                         [
                           {
-                            "idx": 11,
-                            "version": 3
+                            "idx": 10,
+                            "version": 5
                           },
                           339080615957657008497005651150171626532
                         ]
                       ],
                       [
-                        "index",
+                        "y",
                         [
                           {
-                            "idx": 10,
-                            "version": 3
+                            "idx": 11,
+                            "version": 5
                           },
                           339080615957657008497005651150171626532
                         ]
@@ -3344,7 +3446,7 @@
                         [
                           {
                             "idx": 6,
-                            "version": 3
+                            "version": 5
                           },
                           4817772942625407149189657994357095993
                         ]
@@ -3352,11 +3454,14 @@
                     ],
                     "user_data": {
                       "template": {
-                        "GetComponent": "Vec2"
+                        "ComponentInfixOp": [
+                          "Multiply",
+                          "Scalar"
+                        ]
                       }
                     }
                   },
-                  "version": 3
+                  "version": 5
                 },
                 {
                   "value": {
@@ -3391,6 +3496,175 @@
                     }
                   },
                   "version": 3
+                },
+                {
+                  "value": {
+                    "id": [
+                      {
+                        "idx": 9,
+                        "version": 1
+                      },
+                      280296801484134825416921407732658187779
+                    ],
+                    "label": "Make Vec4",
+                    "inputs": [
+                      [
+                        "x",
+                        [
+                          {
+                            "idx": 14,
+                            "version": 1
+                          },
+                          339080615957657008497005651150171626532
+                        ]
+                      ],
+                      [
+                        "y",
+                        [
+                          {
+                            "idx": 15,
+                            "version": 1
+                          },
+                          339080615957657008497005651150171626532
+                        ]
+                      ],
+                      [
+                        "z",
+                        [
+                          {
+                            "idx": 16,
+                            "version": 1
+                          },
+                          339080615957657008497005651150171626532
+                        ]
+                      ],
+                      [
+                        "w",
+                        [
+                          {
+                            "idx": 17,
+                            "version": 1
+                          },
+                          339080615957657008497005651150171626532
+                        ]
+                      ]
+                    ],
+                    "outputs": [
+                      [
+                        "out",
+                        [
+                          {
+                            "idx": 8,
+                            "version": 1
+                          },
+                          4817772942625407149189657994357095993
+                        ]
+                      ]
+                    ],
+                    "user_data": {
+                      "template": {
+                        "Make": "Vec4"
+                      }
+                    }
+                  },
+                  "version": 1
+                },
+                {
+                  "value": {
+                    "id": [
+                      {
+                        "idx": 10,
+                        "version": 1
+                      },
+                      280296801484134825416921407732658187779
+                    ],
+                    "label": "Make Scalar",
+                    "inputs": [
+                      [
+                        "x",
+                        [
+                          {
+                            "idx": 18,
+                            "version": 1
+                          },
+                          339080615957657008497005651150171626532
+                        ]
+                      ]
+                    ],
+                    "outputs": [
+                      [
+                        "out",
+                        [
+                          {
+                            "idx": 9,
+                            "version": 1
+                          },
+                          4817772942625407149189657994357095993
+                        ]
+                      ]
+                    ],
+                    "user_data": {
+                      "template": {
+                        "Make": "Scalar"
+                      }
+                    }
+                  },
+                  "version": 1
+                },
+                {
+                  "value": {
+                    "id": [
+                      {
+                        "idx": 11,
+                        "version": 1
+                      },
+                      280296801484134825416921407732658187779
+                    ],
+                    "label": "Operator (Vec4)",
+                    "inputs": [
+                      [
+                        "x",
+                        [
+                          {
+                            "idx": 19,
+                            "version": 1
+                          },
+                          339080615957657008497005651150171626532
+                        ]
+                      ],
+                      [
+                        "y",
+                        [
+                          {
+                            "idx": 20,
+                            "version": 1
+                          },
+                          339080615957657008497005651150171626532
+                        ]
+                      ]
+                    ],
+                    "outputs": [
+                      [
+                        "out",
+                        [
+                          {
+                            "idx": 10,
+                            "version": 1
+                          },
+                          4817772942625407149189657994357095993
+                        ]
+                      ]
+                    ],
+                    "user_data": {
+                      "template": {
+                        "ComponentInfixOp": [
+                          "Multiply",
+                          "Vec4"
+                        ]
+                      }
+                    }
+                  },
+                  "version": 1
                 }
               ],
               "id": 280296801484134825416921407732658187779
@@ -3532,30 +3806,22 @@
                   "version": 1
                 },
                 {
-                  "value": null,
-                  "version": 2
-                },
-                {
-                  "value": null,
-                  "version": 2
-                },
-                {
                   "value": {
                     "id": [
                       {
-                        "idx": 8,
+                        "idx": 6,
                         "version": 3
                       },
                       339080615957657008497005651150171626532
                     ],
                     "typ": "Scalar",
                     "value": {
-                      "Scalar": 1.0
+                      "Scalar": 0.1
                     },
                     "kind": "ConnectionOrConstant",
                     "node": [
                       {
-                        "idx": 6,
+                        "idx": 5,
                         "version": 3
                       },
                       280296801484134825416921407732658187779
@@ -3568,35 +3834,7 @@
                   "value": {
                     "id": [
                       {
-                        "idx": 9,
-                        "version": 3
-                      },
-                      339080615957657008497005651150171626532
-                    ],
-                    "typ": "Vec2",
-                    "value": {
-                      "Vec2": [
-                        0.0,
-                        0.0
-                      ]
-                    },
-                    "kind": "ConnectionOrConstant",
-                    "node": [
-                      {
-                        "idx": 6,
-                        "version": 3
-                      },
-                      280296801484134825416921407732658187779
-                    ],
-                    "shown_inline": true
-                  },
-                  "version": 3
-                },
-                {
-                  "value": {
-                    "id": [
-                      {
-                        "idx": 10,
+                        "idx": 7,
                         "version": 3
                       },
                       339080615957657008497005651150171626532
@@ -3608,7 +3846,7 @@
                     "kind": "ConnectionOrConstant",
                     "node": [
                       {
-                        "idx": 7,
+                        "idx": 5,
                         "version": 3
                       },
                       280296801484134825416921407732658187779
@@ -3621,8 +3859,8 @@
                   "value": {
                     "id": [
                       {
-                        "idx": 11,
-                        "version": 3
+                        "idx": 8,
+                        "version": 5
                       },
                       339080615957657008497005651150171626532
                     ],
@@ -3636,14 +3874,327 @@
                     "kind": "ConnectionOrConstant",
                     "node": [
                       {
+                        "idx": 6,
+                        "version": 5
+                      },
+                      280296801484134825416921407732658187779
+                    ],
+                    "shown_inline": true
+                  },
+                  "version": 5
+                },
+                {
+                  "value": {
+                    "id": [
+                      {
+                        "idx": 9,
+                        "version": 5
+                      },
+                      339080615957657008497005651150171626532
+                    ],
+                    "typ": "Vec2",
+                    "value": {
+                      "Vec2": [
+                        0.0,
+                        0.0
+                      ]
+                    },
+                    "kind": "ConnectionOrConstant",
+                    "node": [
+                      {
+                        "idx": 6,
+                        "version": 5
+                      },
+                      280296801484134825416921407732658187779
+                    ],
+                    "shown_inline": true
+                  },
+                  "version": 5
+                },
+                {
+                  "value": {
+                    "id": [
+                      {
+                        "idx": 10,
+                        "version": 5
+                      },
+                      339080615957657008497005651150171626532
+                    ],
+                    "typ": "Scalar",
+                    "value": {
+                      "Scalar": 0.0
+                    },
+                    "kind": "ConnectionOrConstant",
+                    "node": [
+                      {
                         "idx": 7,
+                        "version": 5
+                      },
+                      280296801484134825416921407732658187779
+                    ],
+                    "shown_inline": true
+                  },
+                  "version": 5
+                },
+                {
+                  "value": {
+                    "id": [
+                      {
+                        "idx": 11,
+                        "version": 5
+                      },
+                      339080615957657008497005651150171626532
+                    ],
+                    "typ": "Scalar",
+                    "value": {
+                      "Scalar": 1.0
+                    },
+                    "kind": "ConnectionOrConstant",
+                    "node": [
+                      {
+                        "idx": 7,
+                        "version": 5
+                      },
+                      280296801484134825416921407732658187779
+                    ],
+                    "shown_inline": true
+                  },
+                  "version": 5
+                },
+                {
+                  "value": {
+                    "id": [
+                      {
+                        "idx": 12,
+                        "version": 1
+                      },
+                      339080615957657008497005651150171626532
+                    ],
+                    "typ": "Scalar",
+                    "value": {
+                      "Scalar": 0.0
+                    },
+                    "kind": "ConnectionOrConstant",
+                    "node": [
+                      {
+                        "idx": 4,
                         "version": 3
                       },
                       280296801484134825416921407732658187779
                     ],
                     "shown_inline": true
                   },
-                  "version": 3
+                  "version": 1
+                },
+                {
+                  "value": {
+                    "id": [
+                      {
+                        "idx": 13,
+                        "version": 1
+                      },
+                      339080615957657008497005651150171626532
+                    ],
+                    "typ": "Scalar",
+                    "value": {
+                      "Scalar": 0.0
+                    },
+                    "kind": "ConnectionOrConstant",
+                    "node": [
+                      {
+                        "idx": 4,
+                        "version": 3
+                      },
+                      280296801484134825416921407732658187779
+                    ],
+                    "shown_inline": true
+                  },
+                  "version": 1
+                },
+                {
+                  "value": {
+                    "id": [
+                      {
+                        "idx": 14,
+                        "version": 1
+                      },
+                      339080615957657008497005651150171626532
+                    ],
+                    "typ": "Scalar",
+                    "value": {
+                      "Scalar": 0.0
+                    },
+                    "kind": "ConnectionOrConstant",
+                    "node": [
+                      {
+                        "idx": 9,
+                        "version": 1
+                      },
+                      280296801484134825416921407732658187779
+                    ],
+                    "shown_inline": true
+                  },
+                  "version": 1
+                },
+                {
+                  "value": {
+                    "id": [
+                      {
+                        "idx": 15,
+                        "version": 1
+                      },
+                      339080615957657008497005651150171626532
+                    ],
+                    "typ": "Scalar",
+                    "value": {
+                      "Scalar": 0.0
+                    },
+                    "kind": "ConnectionOrConstant",
+                    "node": [
+                      {
+                        "idx": 9,
+                        "version": 1
+                      },
+                      280296801484134825416921407732658187779
+                    ],
+                    "shown_inline": true
+                  },
+                  "version": 1
+                },
+                {
+                  "value": {
+                    "id": [
+                      {
+                        "idx": 16,
+                        "version": 1
+                      },
+                      339080615957657008497005651150171626532
+                    ],
+                    "typ": "Scalar",
+                    "value": {
+                      "Scalar": 0.0
+                    },
+                    "kind": "ConnectionOrConstant",
+                    "node": [
+                      {
+                        "idx": 9,
+                        "version": 1
+                      },
+                      280296801484134825416921407732658187779
+                    ],
+                    "shown_inline": true
+                  },
+                  "version": 1
+                },
+                {
+                  "value": {
+                    "id": [
+                      {
+                        "idx": 17,
+                        "version": 1
+                      },
+                      339080615957657008497005651150171626532
+                    ],
+                    "typ": "Scalar",
+                    "value": {
+                      "Scalar": 0.0
+                    },
+                    "kind": "ConnectionOrConstant",
+                    "node": [
+                      {
+                        "idx": 9,
+                        "version": 1
+                      },
+                      280296801484134825416921407732658187779
+                    ],
+                    "shown_inline": true
+                  },
+                  "version": 1
+                },
+                {
+                  "value": {
+                    "id": [
+                      {
+                        "idx": 18,
+                        "version": 1
+                      },
+                      339080615957657008497005651150171626532
+                    ],
+                    "typ": "Scalar",
+                    "value": {
+                      "Scalar": 0.3
+                    },
+                    "kind": "ConnectionOrConstant",
+                    "node": [
+                      {
+                        "idx": 10,
+                        "version": 1
+                      },
+                      280296801484134825416921407732658187779
+                    ],
+                    "shown_inline": true
+                  },
+                  "version": 1
+                },
+                {
+                  "value": {
+                    "id": [
+                      {
+                        "idx": 19,
+                        "version": 1
+                      },
+                      339080615957657008497005651150171626532
+                    ],
+                    "typ": "Vec4",
+                    "value": {
+                      "Vec4": [
+                        0.0,
+                        0.0,
+                        0.0,
+                        0.0
+                      ]
+                    },
+                    "kind": "ConnectionOrConstant",
+                    "node": [
+                      {
+                        "idx": 11,
+                        "version": 1
+                      },
+                      280296801484134825416921407732658187779
+                    ],
+                    "shown_inline": true
+                  },
+                  "version": 1
+                },
+                {
+                  "value": {
+                    "id": [
+                      {
+                        "idx": 20,
+                        "version": 1
+                      },
+                      339080615957657008497005651150171626532
+                    ],
+                    "typ": "Vec4",
+                    "value": {
+                      "Vec4": [
+                        0.0,
+                        0.0,
+                        0.0,
+                        0.0
+                      ]
+                    },
+                    "kind": "ConnectionOrConstant",
+                    "node": [
+                      {
+                        "idx": 11,
+                        "version": 1
+                      },
+                      280296801484134825416921407732658187779
+                    ],
+                    "shown_inline": true
+                  },
+                  "version": 1
                 }
               ],
               "id": 339080615957657008497005651150171626532
@@ -3695,52 +4246,84 @@
                   "version": 1
                 },
                 {
-                  "value": null,
-                  "version": 2
+                  "value": {
+                    "id": [
+                      {
+                        "idx": 3,
+                        "version": 3
+                      },
+                      4817772942625407149189657994357095993
+                    ],
+                    "node": [
+                      {
+                        "idx": 4,
+                        "version": 3
+                      },
+                      280296801484134825416921407732658187779
+                    ],
+                    "typ": "Scalar"
+                  },
+                  "version": 3
                 },
                 {
-                  "value": null,
-                  "version": 2
+                  "value": {
+                    "id": [
+                      {
+                        "idx": 4,
+                        "version": 3
+                      },
+                      4817772942625407149189657994357095993
+                    ],
+                    "node": [
+                      {
+                        "idx": 5,
+                        "version": 3
+                      },
+                      280296801484134825416921407732658187779
+                    ],
+                    "typ": "Scalar"
+                  },
+                  "version": 3
                 },
                 {
                   "value": {
                     "id": [
                       {
                         "idx": 5,
-                        "version": 3
+                        "version": 5
                       },
                       4817772942625407149189657994357095993
                     ],
                     "node": [
                       {
                         "idx": 6,
-                        "version": 3
+                        "version": 5
                       },
                       280296801484134825416921407732658187779
                     ],
                     "typ": "Scalar"
                   },
-                  "version": 3
+                  "version": 5
                 },
                 {
                   "value": {
                     "id": [
                       {
                         "idx": 6,
-                        "version": 3
+                        "version": 5
                       },
                       4817772942625407149189657994357095993
                     ],
                     "node": [
                       {
                         "idx": 7,
-                        "version": 3
+                        "version": 5
                       },
                       280296801484134825416921407732658187779
                     ],
                     "typ": "Scalar"
                   },
-                  "version": 3
+                  "version": 5
                 },
                 {
                   "value": {
@@ -3761,6 +4344,66 @@
                     "typ": "Vec2"
                   },
                   "version": 3
+                },
+                {
+                  "value": {
+                    "id": [
+                      {
+                        "idx": 8,
+                        "version": 1
+                      },
+                      4817772942625407149189657994357095993
+                    ],
+                    "node": [
+                      {
+                        "idx": 9,
+                        "version": 1
+                      },
+                      280296801484134825416921407732658187779
+                    ],
+                    "typ": "Vec4"
+                  },
+                  "version": 1
+                },
+                {
+                  "value": {
+                    "id": [
+                      {
+                        "idx": 9,
+                        "version": 1
+                      },
+                      4817772942625407149189657994357095993
+                    ],
+                    "node": [
+                      {
+                        "idx": 10,
+                        "version": 1
+                      },
+                      280296801484134825416921407732658187779
+                    ],
+                    "typ": "Scalar"
+                  },
+                  "version": 1
+                },
+                {
+                  "value": {
+                    "id": [
+                      {
+                        "idx": 10,
+                        "version": 1
+                      },
+                      4817772942625407149189657994357095993
+                    ],
+                    "node": [
+                      {
+                        "idx": 11,
+                        "version": 1
+                      },
+                      280296801484134825416921407732658187779
+                    ],
+                    "typ": "Vec4"
+                  },
+                  "version": 1
                 }
               ],
               "id": 4817772942625407149189657994357095993
@@ -3774,7 +4417,7 @@
                 {
                   "value": [
                     {
-                      "idx": 1,
+                      "idx": 10,
                       "version": 1
                     },
                     4817772942625407149189657994357095993
@@ -3782,8 +4425,24 @@
                   "version": 1
                 },
                 {
-                  "value": null,
-                  "version": 0
+                  "value": [
+                    {
+                      "idx": 6,
+                      "version": 5
+                    },
+                    4817772942625407149189657994357095993
+                  ],
+                  "version": 1
+                },
+                {
+                  "value": [
+                    {
+                      "idx": 3,
+                      "version": 3
+                    },
+                    4817772942625407149189657994357095993
+                  ],
+                  "version": 1
                 },
                 {
                   "value": [
@@ -3804,8 +4463,104 @@
                   "version": 0
                 },
                 {
-                  "value": null,
-                  "version": 0
+                  "value": [
+                    {
+                      "idx": 5,
+                      "version": 5
+                    },
+                    4817772942625407149189657994357095993
+                  ],
+                  "version": 3
+                },
+                {
+                  "value": [
+                    {
+                      "idx": 7,
+                      "version": 3
+                    },
+                    4817772942625407149189657994357095993
+                  ],
+                  "version": 5
+                },
+                {
+                  "value": [
+                    {
+                      "idx": 7,
+                      "version": 3
+                    },
+                    4817772942625407149189657994357095993
+                  ],
+                  "version": 5
+                },
+                {
+                  "value": [
+                    {
+                      "idx": 5,
+                      "version": 5
+                    },
+                    4817772942625407149189657994357095993
+                  ],
+                  "version": 5
+                },
+                {
+                  "value": [
+                    {
+                      "idx": 2,
+                      "version": 1
+                    },
+                    4817772942625407149189657994357095993
+                  ],
+                  "version": 5
+                },
+                {
+                  "value": [
+                    {
+                      "idx": 4,
+                      "version": 3
+                    },
+                    4817772942625407149189657994357095993
+                  ],
+                  "version": 1
+                },
+                {
+                  "value": [
+                    {
+                      "idx": 2,
+                      "version": 1
+                    },
+                    4817772942625407149189657994357095993
+                  ],
+                  "version": 1
+                },
+                {
+                  "value": [
+                    {
+                      "idx": 9,
+                      "version": 1
+                    },
+                    4817772942625407149189657994357095993
+                  ],
+                  "version": 1
+                },
+                {
+                  "value": [
+                    {
+                      "idx": 9,
+                      "version": 1
+                    },
+                    4817772942625407149189657994357095993
+                  ],
+                  "version": 1
+                },
+                {
+                  "value": [
+                    {
+                      "idx": 9,
+                      "version": 1
+                    },
+                    4817772942625407149189657994357095993
+                  ],
+                  "version": 1
                 },
                 {
                   "value": null,
@@ -3818,39 +4573,28 @@
                 {
                   "value": [
                     {
-                      "idx": 7,
-                      "version": 3
+                      "idx": 1,
+                      "version": 1
                     },
                     4817772942625407149189657994357095993
                   ],
-                  "version": 3
-                },
-                {
-                  "value": null,
-                  "version": 0
+                  "version": 1
                 },
                 {
                   "value": [
                     {
-                      "idx": 7,
-                      "version": 3
+                      "idx": 8,
+                      "version": 1
                     },
                     4817772942625407149189657994357095993
                   ],
-                  "version": 3
+                  "version": 1
                 }
               ],
               "id": 339080615957657008497005651150171626532
             }
           },
           "node_order": [
-            [
-              {
-                "idx": 1,
-                "version": 1
-              },
-              280296801484134825416921407732658187779
-            ],
             [
               {
                 "idx": 8,
@@ -3860,15 +4604,22 @@
             ],
             [
               {
-                "idx": 7,
+                "idx": 4,
                 "version": 3
               },
               280296801484134825416921407732658187779
             ],
             [
               {
-                "idx": 6,
+                "idx": 5,
                 "version": 3
+              },
+              280296801484134825416921407732658187779
+            ],
+            [
+              {
+                "idx": 7,
+                "version": 5
               },
               280296801484134825416921407732658187779
             ],
@@ -3885,6 +4636,41 @@
                 "version": 1
               },
               280296801484134825416921407732658187779
+            ],
+            [
+              {
+                "idx": 6,
+                "version": 5
+              },
+              280296801484134825416921407732658187779
+            ],
+            [
+              {
+                "idx": 11,
+                "version": 1
+              },
+              280296801484134825416921407732658187779
+            ],
+            [
+              {
+                "idx": 1,
+                "version": 1
+              },
+              280296801484134825416921407732658187779
+            ],
+            [
+              {
+                "idx": 10,
+                "version": 1
+              },
+              280296801484134825416921407732658187779
+            ],
+            [
+              {
+                "idx": 9,
+                "version": 1
+              },
+              280296801484134825416921407732658187779
             ]
           ],
           "connection_in_progress": null,
@@ -3898,53 +4684,80 @@
               },
               {
                 "value": {
-                  "x": 324.86407,
-                  "y": 316.73608
+                  "x": 336.83524,
+                  "y": 424.0607
                 },
                 "version": 1
               },
               {
                 "value": {
-                  "x": 236.28659,
-                  "y": 295.56265
+                  "x": 100.837616,
+                  "y": 375.28552
                 },
                 "version": 1
               },
               {
                 "value": {
-                  "x": 67.395294,
-                  "y": 237.46976
+                  "x": -190.76752,
+                  "y": 399.46164
                 },
                 "version": 1
               },
               {
-                "value": null,
-                "version": 0
-              },
-              {
-                "value": null,
-                "version": 0
-              },
-              {
                 "value": {
-                  "x": 78.445984,
-                  "y": 396.94064
+                  "x": -33.43695,
+                  "y": 327.52145
                 },
                 "version": 3
               },
               {
                 "value": {
-                  "x": 86.75055,
-                  "y": 303.35684
+                  "x": -180.16519,
+                  "y": 320.27036
                 },
                 "version": 3
               },
               {
                 "value": {
-                  "x": -128.47722,
-                  "y": 306.73972
+                  "x": -262.6663,
+                  "y": 273.81232
+                },
+                "version": 5
+              },
+              {
+                "value": {
+                  "x": -33.24521,
+                  "y": 264.99963
+                },
+                "version": 5
+              },
+              {
+                "value": {
+                  "x": -409.75632,
+                  "y": 317.90186
                 },
                 "version": 3
+              },
+              {
+                "value": {
+                  "x": 99.367584,
+                  "y": 459.78268
+                },
+                "version": 1
+              },
+              {
+                "value": {
+                  "x": -4.9996033,
+                  "y": 478.7145
+                },
+                "version": 1
+              },
+              {
+                "value": {
+                  "x": 178.34479,
+                  "y": 414.82004
+                },
+                "version": 1
               }
             ],
             "id": 280296801484134825416921407732658187779
@@ -3952,10 +4765,10 @@
           "node_finder": null,
           "pan_zoom": {
             "pan": {
-              "x": 123.59485,
-              "y": 86.3271
+              "x": 202.4253,
+              "y": -75.96451
             },
-            "zoom": 0.5875755
+            "zoom": 0.48312438
           },
           "_user_state": null
         },
@@ -3965,7 +4778,7 @@
       }
     ]
   ],
-  "selected_function": 0,
+  "selected_function": 1,
   "show_wat": false,
   "pause": false,
   "focused": false
