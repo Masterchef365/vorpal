@@ -56,6 +56,7 @@ extern "C" {
         pos_y: f32,
         resolution_x: f32,
         resolution_y: f32,
+        smoke_quantity: f32,
         time: f32,
     );
 }
@@ -135,6 +136,7 @@ impl Plugin {
             for x in 0..w {
                 let vel_x = u[(x, y)];
                 let vel_y = v[(x, y)];
+                let smoke_quantity = self.smoke_sim.smoke()[(x, y)];
 
                 let mut rgba = [0.; 4];
                 unsafe {
@@ -148,6 +150,7 @@ impl Plugin {
                         y as f32,
                         w as f32,
                         h as f32,
+                        smoke_quantity,
                         time,
                     );
                 }
@@ -159,7 +162,9 @@ impl Plugin {
         self.out_rgba.clear();
         self.out_rgba.extend(output_buf.data().iter().flatten());
 
-        self.last_cursor = Some([cursor_x, cursor_y]);
+        if cursor_x > 0. && cursor_y > 0. {
+            self.last_cursor = Some([cursor_x, cursor_y]);
+        }
 
         &self.out_rgba
     }

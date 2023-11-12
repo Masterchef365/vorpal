@@ -395,7 +395,7 @@ impl eframe::App for VorpalApp {
                 )
                 .inner;
 
-            if response.clicked() | response.dragged() {
+            self.cursor_pos = (response.clicked() || response.dragged()).then(|| {
                 let cursor_pos = response
                     .interact_pointer_pos()
                     .unwrap_or(egui::Pos2::new(-1., -1.));
@@ -404,8 +404,8 @@ impl eframe::App for VorpalApp {
                 let image_size_vect = egui::Vec2::new(image_shape[0] as f32, image_shape[1] as f32);
                 let pixel_pos = image_size_vect * rel_pos / response.rect.size();
 
-                self.cursor_pos = Some(pixel_pos.into());
-            }
+                pixel_pos.into()
+            });
         });
     }
 }
