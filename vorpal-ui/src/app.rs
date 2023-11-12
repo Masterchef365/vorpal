@@ -388,12 +388,15 @@ impl eframe::App for VorpalApp {
         }
 
         egui::CentralPanel::default().show(ctx, |ui| {
+            /*
             let response = ui
                 .with_layout(
                     Layout::centered_and_justified(egui::Direction::LeftToRight),
                     |ui| self.image.show(ui),
                 )
                 .inner;
+            */
+            let response = self.image.show(ui);
 
             self.cursor_pos = (response.clicked() || response.dragged()).then(|| {
                 let cursor_pos = response
