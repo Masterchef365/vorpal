@@ -81,8 +81,11 @@ impl CodeAnalysis {
     pub fn func_name_rust(&self, func_name: &str) -> Result<String> {
         let mut param_list_text = String::new();
 
-
-        writeln!(&mut param_list_text, r#"#[link(wasm_import_module = "{func_name}")]"#).unwrap();
+        writeln!(
+            &mut param_list_text,
+            r#"#[link(wasm_import_module = "{func_name}")]"#
+        )
+        .unwrap();
         writeln!(&mut param_list_text, "{}", r#"extern "C" {"#).unwrap();
         writeln!(&mut param_list_text, "fn {func_name}(").unwrap();
 
@@ -110,7 +113,11 @@ impl CodeAnalysis {
                         writeln!(&mut param_list_text, "{space}{nicer_input_name}: f32, ").unwrap();
                     } else {
                         for lane in "xyzw".chars().take(input_dtype.n_lanes()) {
-                            writeln!(&mut param_list_text, "{space}{nicer_input_name}_{lane}: f32, ").unwrap();
+                            writeln!(
+                                &mut param_list_text,
+                                "{space}{nicer_input_name}_{lane}: f32, "
+                            )
+                            .unwrap();
                         }
                     }
                 }

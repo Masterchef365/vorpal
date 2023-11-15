@@ -29,6 +29,7 @@ pub struct SaveState {
     functions: Vec<(FuncName, NodeGraphWidget)>,
     selected_function: usize,
     show_wat: bool,
+    show_rust_decl: bool,
     pause: bool,
     focused: bool,
 }
@@ -89,6 +90,7 @@ impl Default for SaveState {
             show_wat: false,
             pause: false,
             focused: false,
+            show_rust_decl: true,
         }
     }
 }
@@ -369,22 +371,26 @@ impl eframe::App for VorpalApp {
 
                 ui.separator();
 
-                ui.label("Rust function declaration:");
-                // Display that function body
-                if let Some(mut function_body) = maybe_fn_body {
-                    ScrollArea::horizontal()
-                        .id_source("for rust function body")
-                        .show(ui, |ui| {
-                            // Not actually editing text here!!
-                            ui.add(
-                                TextEdit::multiline(&mut function_body)
-                                    .code_editor()
-                                    .desired_width(f32::INFINITY),
-                            );
-                        });
+                ui.checkbox(&mut self.saved.show_rust_decl, "Rust function declaration:");
+                if self.saved.show_rust_decl {
+                    // Display that function body
+                    if let Some(mut function_body) = maybe_fn_body {
+                        ScrollArea::horizontal()
+                            .id_source("for rust function body")
+                            .show(ui, |ui| {
+                                // Not actually editing text here!!
+                                ui.add(
+                                    TextEdit::multiline(&mut function_body)
+                                        .code_editor()
+                                        .desired_width(f32::INFINITY),
+                                );
+                            });
+                    }
                 }
 
-                ui.checkbox(&mut self.saved.show_wat, "Show .wat");
+                ui.separator();
+
+                ui.checkbox(&mut self.saved.show_wat, "WebAssembly text:");
                 if self.saved.show_wat {
                     egui::ScrollArea::vertical().show(ui, |ui| {
                         // Show wasm code
