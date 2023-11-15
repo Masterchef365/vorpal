@@ -7,5 +7,6 @@ members = [
     "vorpal-wasm-builtins",
     "vorpal-image",
     "vorpal-widgets",
-    "fluidsim"
+    "examples/fluidsim",
+    "examples/particle-in-a-box",
 ]
