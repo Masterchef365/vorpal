@@ -363,25 +363,26 @@ impl eframe::App for VorpalApp {
                         .as_ref()?
                         .analyses
                         .get(self.saved.selected_function)?
-                        .func_name_wat(&func_name)
+                        .func_name_rust(&func_name)
                         .ok()
                 });
 
+                ui.separator();
+
+                ui.label("Rust function declaration:");
                 // Display that function body
-                if let Some(function_body) = maybe_fn_body {
+                if let Some(mut function_body) = maybe_fn_body {
                     ScrollArea::horizontal()
-                        .id_source("spognebobe")
+                        .id_source("for rust function body")
                         .show(ui, |ui| {
-                            //ui.label(function_body);
+                            // Not actually editing text here!!
                             ui.add(
-                                Label::new(RichText::new(function_body).color(Color32::WHITE))
-                                    .truncate(false)
-                                    .wrap(false),
+                                TextEdit::singleline(&mut function_body)
+                                    .code_editor()
+                                    .desired_width(f32::INFINITY),
                             );
                         });
                 }
-
-                ui.separator();
 
                 ui.checkbox(&mut self.saved.show_wat, "Show .wat");
                 if self.saved.show_wat {

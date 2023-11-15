@@ -78,6 +78,33 @@ impl CodeAnalysis {
         &self.input_list
     }
 
+    pub fn func_name_rust(&self, func_name: &str) -> Result<String> {
+        let mut param_list_text = String::new();
+
+        write!(&mut param_list_text, "fn {func_name}(").unwrap();
+
+        for input_param in &self.input_list {
+            match input_param {
+                InputParameter::OutputPointer(_) => {
+                    // Pointer for output float data (*mut f32)
+                    write!(&mut param_list_text, "$out_ptr: *mut f32, ").unwrap();
+                }
+                InputParameter::ExternalVariable(input_name, input_dtype) => {
+                    for lane in "xyzw".chars().take(input_dtype.n_lanes()) {
+                        write!(&mut param_list_text, "${input_name}_{lane}: f32, ").unwrap();
+                    }
+                }
+            }
+        }
+
+        // Anticipate the end being ", " (this is kinda stupid)
+        param_list_text.pop();
+        param_list_text.pop();
+        write!(&mut param_list_text, ")").unwrap();
+
+        Ok(param_list_text)
+    }
+
     pub fn func_name_wat(&self, func_name: &str) -> Result<String> {
         let mut param_list_text = String::new();
 
