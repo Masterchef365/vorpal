@@ -31,33 +31,33 @@ pub extern "C" fn make_image(
 #[link(wasm_import_module = "add_velocity")]
 extern "C" {
     fn add_velocity(
-        ptr: *mut f32,
-        cursor_x: f32,
-        cursor_y: f32,
-        last_cursor_x: f32,
-        last_cursor_y: f32,
-        pos_x: f32,
-        pos_y: f32,
-        resolution_x: f32,
-        resolution_y: f32,
-        time: f32,
+        out_ptr: *mut f32,
+        cursor_position_pixels_x: f32,
+        cursor_position_pixels_y: f32,
+        last_cursor_position_pixels_x: f32,
+        last_cursor_position_pixels_y: f32,
+        position_pixels_x: f32,
+        position_pixels_y: f32,
+        resolution_pixels_x: f32,
+        resolution_pixels_y: f32,
+        time_seconds: f32,
     );
 }
 
 #[link(wasm_import_module = "get_color")]
 extern "C" {
     fn get_color(
-        ptr: *mut f32,
-        cursor_x: f32,
-        cursor_y: f32,
-        fluid_vel_x: f32,
-        fluid_vel_y: f32,
-        pos_x: f32,
-        pos_y: f32,
-        resolution_x: f32,
-        resolution_y: f32,
+        out_ptr: *mut f32,
+        cursor_position_pixels_x: f32,
+        cursor_position_pixels_y: f32,
+        fluid_velocity_pixelsframe_x: f32,
+        fluid_velocity_pixelsframe_y: f32,
+        position_pixels_x: f32,
+        position_pixels_y: f32,
+        resolution_pixels_x: f32,
+        resolution_pixels_y: f32,
         smoke_quantity: f32,
-        time: f32,
+        time_seconds: f32,
     );
 }
 
