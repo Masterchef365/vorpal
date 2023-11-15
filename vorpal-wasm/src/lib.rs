@@ -78,10 +78,13 @@ impl CodeAnalysis {
         &self.input_list
     }
 
+    pub fn func_name_rust(&self, func_name: &str) -> Result<String> {
+        todo!()
+    }
+
     /// Compile this analysis to webassembly
     pub fn compile_to_wat(&self, func_name: &str) -> Result<String> {
         // Build parameter list
-        let mut input_var_ids = HashSet::new();
         let mut param_list_text = String::new();
         for input_param in &self.input_list {
             match input_param {
@@ -103,7 +106,6 @@ impl CodeAnalysis {
                             );
                             write!(&mut param_list_text, "(param ${input_var_id}_{lane} f32) ")
                                 .unwrap();
-                            input_var_ids.insert(input_var_id);
                         } else {
                             // Dummy parameter to keep the ordering of the inputs
                             write!(&mut param_list_text, "(param f32) ").unwrap();
@@ -112,6 +114,23 @@ impl CodeAnalysis {
                 }
             }
         }
+
+        let mut input_var_ids = HashSet::new();
+        for input_param in &self.input_list {
+            match input_param {
+                InputParameter::ExternalVariable(input_name, input_dtype) => {
+                    for lane in "xyzw".chars().take(input_dtype.n_lanes()) {
+                        if let Some((input_var_id, expected_dtype)) =
+                            self.input_to_var.get(input_name)
+                        {
+                            input_var_ids.insert(input_var_id);
+                        }
+                    }
+                }
+                _ => (),
+            }
+        }
+
 
         // Build local list
         let mut locals_text = String::new();

@@ -6,7 +6,7 @@ use std::{
 
 use anyhow::format_err;
 
-use eframe::egui::{self, ComboBox, Layout, TextEdit, Ui};
+use eframe::egui::{self, ComboBox, Layout, ScrollArea, TextEdit, Ui};
 use ndarray::*;
 use vorpal_core::{ndarray, DataType, ExternInputId, ExternParameters, ParameterList, Value, Vec2};
 
@@ -350,6 +350,23 @@ impl eframe::App for VorpalApp {
                     dtype_selector(99999, ui, &mut self.add_dtype)
                 });
 
+                let func_name = &self.saved.functions[self.saved.selected_function].0;
+
+                let maybe_fn_body: Option<String> = self.engine.as_ref().and_then(|engine| {
+                    engine
+                        .cache
+                        .as_ref()?
+                        .analyses
+                        .get(self.saved.selected_function)?
+                        .func_name_rust(&func_name)
+                        .ok()
+                });
+                if let Some(function_body) = maybe_fn_body {
+                    ScrollArea::horizontal().show(ui, |ui| {
+                        ui.label(function_body);
+                    });
+                }
+
                 ui.separator();
 
                 ui.checkbox(&mut self.saved.show_wat, "Show .wat");
@@ -371,9 +388,7 @@ impl eframe::App for VorpalApp {
                             })
                             .and_then(|analysis| {
                                 analysis
-                                    .compile_to_wat(
-                                        &self.saved.functions[self.saved.selected_function].0,
-                                    )
+                                    .compile_to_wat(&func_name)
                                     .map_err(|e| format_err!("Compilation failed {:?}", e))
                             })
                             .unwrap_or_else(|err| err.to_string());

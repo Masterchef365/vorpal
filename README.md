@@ -20,6 +20,7 @@ This is similar to other "playground" environments such as Shadertoy.
 ### vorpal-ui 
 - [ ] More output types besides image, e.g. mesh data, opengl, etc.
 - [ ] Use `egui_dock` or similar
+- [ ] Ask the user if they _really_ want to load defaults
 
 ### vorpal-widgets
 - [ ] Swizzling node, which is compiled to the instructions vorpal-core knows
