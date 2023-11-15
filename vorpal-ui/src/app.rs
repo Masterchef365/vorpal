@@ -377,7 +377,7 @@ impl eframe::App for VorpalApp {
                         .show(ui, |ui| {
                             // Not actually editing text here!!
                             ui.add(
-                                TextEdit::singleline(&mut function_body)
+                                TextEdit::multiline(&mut function_body)
                                     .code_editor()
                                     .desired_width(f32::INFINITY),
                             );

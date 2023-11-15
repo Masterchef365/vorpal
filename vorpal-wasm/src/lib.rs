@@ -81,13 +81,15 @@ impl CodeAnalysis {
     pub fn func_name_rust(&self, func_name: &str) -> Result<String> {
         let mut param_list_text = String::new();
 
-        write!(&mut param_list_text, "fn {func_name}(").unwrap();
+        writeln!(&mut param_list_text, "fn {func_name}(").unwrap();
+
+        let space = "    ";
 
         for input_param in &self.input_list {
             match input_param {
                 InputParameter::OutputPointer(_) => {
                     // Pointer for output float data (*mut f32)
-                    write!(&mut param_list_text, "out_ptr: *mut f32, ").unwrap();
+                    writeln!(&mut param_list_text, "{space}out_ptr: *mut f32, ").unwrap();
                 }
                 InputParameter::ExternalVariable(input_name, input_dtype) => {
                     let func_name: String = input_name
@@ -102,20 +104,17 @@ impl CodeAnalysis {
                         .collect();
 
                     if input_dtype.n_lanes() == 1 {
-                        write!(&mut param_list_text, "{func_name}: f32, ").unwrap();
+                        writeln!(&mut param_list_text, "{space}{func_name}: f32, ").unwrap();
                     } else {
                         for lane in "xyzw".chars().take(input_dtype.n_lanes()) {
-                            write!(&mut param_list_text, "{func_name}_{lane}: f32, ").unwrap();
+                            writeln!(&mut param_list_text, "{space}{func_name}_{lane}: f32, ").unwrap();
                         }
                     }
                 }
             }
         }
 
-        // Anticipate the end being ", " (this is kinda stupid)
-        param_list_text.pop();
-        param_list_text.pop();
-        write!(&mut param_list_text, ")").unwrap();
+        writeln!(&mut param_list_text, ")").unwrap();
 
         Ok(param_list_text)
     }
