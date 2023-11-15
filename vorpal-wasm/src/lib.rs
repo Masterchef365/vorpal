@@ -87,11 +87,26 @@ impl CodeAnalysis {
             match input_param {
                 InputParameter::OutputPointer(_) => {
                     // Pointer for output float data (*mut f32)
-                    write!(&mut param_list_text, "$out_ptr: *mut f32, ").unwrap();
+                    write!(&mut param_list_text, "out_ptr: *mut f32, ").unwrap();
                 }
                 InputParameter::ExternalVariable(input_name, input_dtype) => {
-                    for lane in "xyzw".chars().take(input_dtype.n_lanes()) {
-                        write!(&mut param_list_text, "${input_name}_{lane}: f32, ").unwrap();
+                    let func_name: String = input_name
+                        .to_string()
+                        .to_lowercase()
+                        .chars()
+                        .filter_map(|c| match c {
+                            c if c.is_alphanumeric() => Some(c),
+                            c if c.is_whitespace() => Some('_'),
+                            _ => None,
+                        })
+                        .collect();
+
+                    if input_dtype.n_lanes() == 1 {
+                        write!(&mut param_list_text, "{func_name}: f32, ").unwrap();
+                    } else {
+                        for lane in "xyzw".chars().take(input_dtype.n_lanes()) {
+                            write!(&mut param_list_text, "{func_name}_{lane}: f32, ").unwrap();
+                        }
                     }
                 }
             }
