@@ -6,7 +6,10 @@ use std::{
 
 use anyhow::format_err;
 
-use eframe::egui::{self, ComboBox, Layout, ScrollArea, TextEdit, Ui};
+use eframe::{
+    egui::{self, ComboBox, Label, Layout, RichText, ScrollArea, TextEdit, Ui},
+    epaint::Color32,
+};
 use ndarray::*;
 use vorpal_core::{ndarray, DataType, ExternInputId, ExternParameters, ParameterList, Value, Vec2};
 
@@ -350,21 +353,32 @@ impl eframe::App for VorpalApp {
                     dtype_selector(99999, ui, &mut self.add_dtype)
                 });
 
+                // Get function name
                 let func_name = &self.saved.functions[self.saved.selected_function].0;
 
+                // Get rust function body as a string
                 let maybe_fn_body: Option<String> = self.engine.as_ref().and_then(|engine| {
                     engine
                         .cache
                         .as_ref()?
                         .analyses
                         .get(self.saved.selected_function)?
-                        .func_name_rust(&func_name)
+                        .func_name_wat(&func_name)
                         .ok()
                 });
+
+                // Display that function body
                 if let Some(function_body) = maybe_fn_body {
-                    ScrollArea::horizontal().show(ui, |ui| {
-                        ui.label(function_body);
-                    });
+                    ScrollArea::horizontal()
+                        .id_source("spognebobe")
+                        .show(ui, |ui| {
+                            //ui.label(function_body);
+                            ui.add(
+                                Label::new(RichText::new(function_body).color(Color32::WHITE))
+                                    .truncate(false)
+                                    .wrap(false),
+                            );
+                        });
                 }
 
                 ui.separator();

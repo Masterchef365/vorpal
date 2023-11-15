@@ -78,14 +78,11 @@ impl CodeAnalysis {
         &self.input_list
     }
 
-    pub fn func_name_rust(&self, func_name: &str) -> Result<String> {
-        todo!()
-    }
-
-    /// Compile this analysis to webassembly
-    pub fn compile_to_wat(&self, func_name: &str) -> Result<String> {
-        // Build parameter list
+    pub fn func_name_wat(&self, func_name: &str) -> Result<String> {
         let mut param_list_text = String::new();
+
+        write!(&mut param_list_text, "(func ${func_name} ").unwrap();
+
         for input_param in &self.input_list {
             match input_param {
                 InputParameter::OutputPointer(input_var_id) => {
@@ -115,14 +112,18 @@ impl CodeAnalysis {
             }
         }
 
+        Ok(param_list_text)
+    }
+
+    /// Compile this analysis to webassembly
+    pub fn compile_to_wat(&self, func_name: &str) -> Result<String> {
+        // Build parameter list
         let mut input_var_ids = HashSet::new();
         for input_param in &self.input_list {
             match input_param {
                 InputParameter::ExternalVariable(input_name, input_dtype) => {
-                    for lane in "xyzw".chars().take(input_dtype.n_lanes()) {
-                        if let Some((input_var_id, expected_dtype)) =
-                            self.input_to_var.get(input_name)
-                        {
+                    for _ in 0..input_dtype.n_lanes() {
+                        if let Some((input_var_id, _)) = self.input_to_var.get(input_name) {
                             input_var_ids.insert(input_var_id);
                         }
                     }
@@ -130,7 +131,6 @@ impl CodeAnalysis {
                 _ => (),
             }
         }
-
 
         // Build local list
         let mut locals_text = String::new();
@@ -144,6 +144,8 @@ impl CodeAnalysis {
                 writeln!(&mut locals_text, "(local ${var_id}_{lane} f32) ").unwrap();
             }
         }
+
+        let func_decl = self.func_name_wat(func_name)?;
 
         // Compile instructions
         let mut function_body_text = String::new();
@@ -181,7 +183,7 @@ impl CodeAnalysis {
 {builtin_imports}
 
 ;; == Function declaration ==
-  (func ${func_name} {param_list_text}
+{func_decl}
 
 ;; Local variables
 {locals_text}
@@ -220,7 +222,8 @@ impl CodeAnalysis {
             Node::ExternInput(name, dtype) => {
                 if let Some((existing_id, _)) = self.input_to_var.get(&name) {
                     // This input already exists. Stop before generating a new one!
-                    self.locals.insert(node_hash.clone(), (*existing_id, *dtype));
+                    self.locals
+                        .insert(node_hash.clone(), (*existing_id, *dtype));
                     return *dtype;
                 } else {
                     self.input_to_var.insert(name.clone(), (new_id, *dtype));
