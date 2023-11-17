@@ -253,7 +253,7 @@ impl WidgetValueTrait for NodeGuiValue {
 
         ui.label(param_name);
 
-        let mut input_vector = |vector: &mut [f32]| {
+        let input_vector = |ui: &mut Ui, vector: &mut [f32]| {
             ui.horizontal(|ui| {
                 for (num, name) in vector.iter_mut().zip(XYZW) {
                     ui.label(name);
@@ -263,9 +263,14 @@ impl WidgetValueTrait for NodeGuiValue {
         };
 
         match self {
-            Self(Value::Vec2(value)) => input_vector(value),
-            Self(Value::Vec3(value)) => input_vector(value),
-            Self(Value::Vec4(value)) => input_vector(value),
+            Self(Value::Vec2(value)) => input_vector(ui, value),
+            Self(Value::Vec3(value)) => {
+                ui.horizontal(|ui| {
+                    input_vector(ui, value);
+                    srgb_edit(ui, value);
+                });
+            }
+            Self(Value::Vec4(value)) => input_vector(ui, value),
             Self(Value::Scalar(value)) => {
                 ui.horizontal(|ui| {
                     ui.add(input_scalar(value));
@@ -274,6 +279,13 @@ impl WidgetValueTrait for NodeGuiValue {
         }
         // This allows you to return your responses from the inline widgets.
         Vec::new()
+    }
+}
+
+fn srgb_edit(ui: &mut Ui, value: &mut [f32; 3]) {
+    let mut srgb = value.map(|v| (v.clamp(0., 1.) * 256.) as u8);
+    if ui.color_edit_button_srgb(&mut srgb).changed() {
+        *value = srgb.map(|v| v as f32 / 256.);
     }
 }
 
@@ -293,7 +305,7 @@ impl NodeDataTrait for MyNodeData {
         &self,
         ui: &mut egui::Ui,
         node_id: NodeId,
-        _graph: &Graph<MyNodeData, DataType, NodeGuiValue>,
+        graph: &Graph<MyNodeData, DataType, NodeGuiValue>,
         user_state: &mut Self::UserState,
     ) -> Vec<NodeResponse<MyResponse, MyNodeData>>
     where
