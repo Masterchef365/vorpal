@@ -270,7 +270,10 @@ impl WidgetValueTrait for NodeGuiValue {
                     srgb_edit(ui, value);
                 });
             }
-            Self(Value::Vec4(value)) => input_vector(ui, value),
+            Self(Value::Vec4(value)) => {
+                input_vector(ui, value);
+                premultiplied_srgba_edit(ui, value);
+            }
             Self(Value::Scalar(value)) => {
                 ui.horizontal(|ui| {
                     ui.add(input_scalar(value));
@@ -288,6 +291,15 @@ fn srgb_edit(ui: &mut Ui, value: &mut [f32; 3]) {
         *value = srgb.map(|v| v as f32 / 256.);
     }
 }
+
+fn premultiplied_srgba_edit(ui: &mut Ui, value: &mut [f32; 4]) {
+    let [r, g, b, a] = value.map(|v| (v.clamp(0., 1.) * 256.) as u8);
+    let mut srgba: Color32 = Color32::from_rgba_premultiplied(r, g, b, a);
+    if ui.color_edit_button_srgba(&mut srgba).changed() {
+        *value = srgba.to_array().map(|v| v as f32 / 256.);
+    }
+}
+
 
 impl UserResponseTrait for MyResponse {}
 impl NodeDataTrait for MyNodeData {
