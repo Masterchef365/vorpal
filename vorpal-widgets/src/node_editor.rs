@@ -219,7 +219,9 @@ impl NodeTemplateIter for AllMyNodeTemplates<'_> {
                 ComponentInfixOp::Add,
                 dtype,
             ));
-            types.push(MyNodeTemplate::GetComponent(dtype));
+            if dtype != DataType::Scalar {
+                types.push(MyNodeTemplate::GetComponent(dtype));
+            }
             types.push(MyNodeTemplate::ComponentFn(ComponentFn::NaturalLog, dtype));
             types.push(MyNodeTemplate::Dot(dtype));
         }
