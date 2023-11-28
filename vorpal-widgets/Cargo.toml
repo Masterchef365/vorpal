@@ -6,7 +6,7 @@ edition = "2021"
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
-egui = "0.23"
+egui = "0.24"
 vorpal-core = { path = "../vorpal-core" }
 egui_node_graph = { git = "https://github.com/Masterchef365/egui_node_graph.git", branch = "unique_slotmaps" }
 #egui_node_graph = { path = "../../egui_node_graph/egui_node_graph" }
