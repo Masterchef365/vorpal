@@ -20,16 +20,6 @@ checksum = "c71b1793ee61086797f5c80b6efa2b8ffa6d5dd703f118545808a7f2e27f7046"
 
 [[package]]
 name = "accesskit"
-version = "0.11.2"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "76eb1adf08c5bcaa8490b9851fd53cca27fa9880076f178ea9d29f05196728a8"
-dependencies = [
- "enumn",
- "serde",
-]
-
-[[package]]
-name = "accesskit"
 version = "0.12.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "ca8410747ed85a17c4a1e9ed3f5a74d3e7bdcc876cf9a18ff40ae21d645997b2"
@@ -44,7 +34,7 @@ version = "0.16.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "8c17cca53c09fbd7288667b22a201274b9becaa27f0b91bf52a526db95de45e6"
 dependencies = [
- "accesskit 0.12.1",
+ "accesskit",
 ]
 
 [[package]]
@@ -53,7 +43,7 @@ version = "0.10.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "cd3b6ae1eabbfbced10e840fd3fce8a93ae84f174b3e4ba892ab7bcb42e477a7"
 dependencies = [
- "accesskit 0.12.1",
+ "accesskit",
  "accesskit_consumer",
  "objc2",
  "once_cell",
@@ -65,7 +55,7 @@ version = "0.6.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "6c8c9b4467d77cacfbc93cee9aa8e7822f6d527c774efdca5f8b3a5280c34847"
 dependencies = [
- "accesskit 0.12.1",
+ "accesskit",
  "accesskit_consumer",
  "async-channel",
  "async-once-cell",
@@ -82,7 +72,7 @@ version = "0.15.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "afcae27ec0974fc7c3b0b318783be89fd1b2e66dd702179fe600166a38ff4a0b"
 dependencies = [
- "accesskit 0.12.1",
+ "accesskit",
  "accesskit_consumer",
  "once_cell",
  "paste",
@@ -96,7 +86,7 @@ version = "0.15.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "88e39fcec2e10971e188730b7a76bab60647dacc973d4591855ebebcadfaa738"
 dependencies = [
- "accesskit 0.12.1",
+ "accesskit",
  "accesskit_macos",
  "accesskit_unix",
  "accesskit_windows",
@@ -955,15 +945,6 @@ checksum = "9ea835d29036a4087793836fa931b08837ad5e957da9e23886b29586fb9b6650"
 
 [[package]]
 name = "ecolor"
-version = "0.23.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "cfdf4e52dbbb615cfd30cf5a5265335c217b5fd8d669593cea74a517d9c605af"
-dependencies = [
- "serde",
-]
-
-[[package]]
-name = "ecolor"
 version = "0.24.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "e6d9d80ab06fc3e7ceb0a7c9b0514c9eba266c189e71044e7bac679e1736a7cb"
@@ -981,7 +962,7 @@ dependencies = [
  "bytemuck",
  "cocoa",
  "directories-next",
- "egui 0.24.0",
+ "egui",
  "egui-winit",
  "egui_glow",
  "glow",
@@ -1007,27 +988,13 @@ dependencies = [
 
 [[package]]
 name = "egui"
-version = "0.23.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "8bd69fed5fcf4fbb8225b24e80ea6193b61e17a625db105ef0c4d71dde6eb8b7"
-dependencies = [
- "accesskit 0.11.2",
- "ahash",
- "epaint 0.23.0",
- "nohash-hasher",
- "ron",
- "serde",
-]
-
-[[package]]
-name = "egui"
 version = "0.24.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "2e46df77bb493b9ead5733540efdd2a1b0c18a5f75915921fc734495108172a5"
 dependencies = [
- "accesskit 0.12.1",
+ "accesskit",
  "ahash",
- "epaint 0.24.0",
+ "epaint",
  "log",
  "nohash-hasher",
  "ron",
@@ -1042,7 +1009,7 @@ checksum = "065960051f1ff843be036a1743bd9fc8dfd508c0444dce35d620febed91fad2b"
 dependencies = [
  "accesskit_winit",
  "arboard",
- "egui 0.24.0",
+ "egui",
  "log",
  "raw-window-handle",
  "serde",
@@ -1059,7 +1026,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "bcacd802e71d0c3b510cf1e1558432e4afc1434f3ccc9a8b23b42c39cd194207"
 dependencies = [
  "bytemuck",
- "egui 0.24.0",
+ "egui",
  "glow",
  "log",
  "memoffset 0.7.1",
@@ -1070,9 +1037,9 @@ dependencies = [
 [[package]]
 name = "egui_node_graph"
 version = "0.4.0"
-source = "git+https://github.com/Masterchef365/egui_node_graph.git?branch=unique_slotmaps#92e965c5dea82ae1f460ce1a4f2277cc66ce488e"
+source = "git+https://github.com/Masterchef365/egui_node_graph.git?branch=unique_slotmaps#fa958c6b1eecd4aee15a0cb9952504eb91c270f9"
 dependencies = [
- "egui 0.23.0",
+ "egui",
  "getrandom",
  "serde",
  "slotmap",
@@ -1085,15 +1052,6 @@ name = "either"
 version = "1.9.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "a26ae43d7bcc3b814de94796a5e736d4029efb0ee900c12e2d54c993ad1a1e07"
-
-[[package]]
-name = "emath"
-version = "0.23.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "1ef2b29de53074e575c18b694167ccbe6e5191f7b25fe65175a0d905a32eeec0"
-dependencies = [
- "serde",
-]
 
 [[package]]
 name = "emath"
@@ -1139,21 +1097,6 @@ dependencies = [
 
 [[package]]
 name = "epaint"
-version = "0.23.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "58067b840d009143934d91d8dcb8ded054d8301d7c11a517ace0a99bb1e1595e"
-dependencies = [
- "ab_glyph",
- "ahash",
- "ecolor 0.23.0",
- "emath 0.23.0",
- "nohash-hasher",
- "parking_lot",
- "serde",
-]
-
-[[package]]
-name = "epaint"
 version = "0.24.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "12f370b53e435fc235243174f3b2bf68a4b0202f3885cece16ad4aecd03222c4"
@@ -1161,8 +1104,8 @@ dependencies = [
  "ab_glyph",
  "ahash",
  "bytemuck",
- "ecolor 0.24.0",
- "emath 0.24.0",
+ "ecolor",
+ "emath",
  "log",
  "nohash-hasher",
  "parking_lot",
@@ -3134,7 +3077,7 @@ name = "vorpal-widgets"
 version = "0.1.0"
 dependencies = [
  "anyhow",
- "egui 0.24.0",
+ "egui",
  "egui_node_graph",
  "serde",
  "vorpal-core",
