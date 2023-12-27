@@ -371,7 +371,14 @@ impl eframe::App for VorpalApp {
 
                 ui.separator();
 
-                ui.checkbox(&mut self.saved.show_rust_decl, "Rust function declaration:");
+                ui.horizontal(|ui| {
+                    ui.checkbox(&mut self.saved.show_rust_decl, "Rust function declaration:");
+                    if ui.button("Copy").clicked() {
+                        if let Some(function_body) = &maybe_fn_body {
+                            ui.output_mut(|o| o.copied_text = function_body.clone());
+                        }
+                    }
+                });
                 if self.saved.show_rust_decl {
                     // Display that function body
                     if let Some(mut function_body) = maybe_fn_body {
