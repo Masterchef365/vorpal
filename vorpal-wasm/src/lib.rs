@@ -294,7 +294,7 @@ impl CodeAnalysis {
                 self.find_inputs_and_locals_recursive(HashRcByPtr(b.clone()));
                 DataType::Scalar
             }
-            Node::ExternSampler(_) => todo!(),
+            //Node::ExternSampler(_) => todo!(),
             Node::Constant(val) => val.dtype(),
             Node::Make(sub_nodes, _) => {
                 for sub_node in sub_nodes {

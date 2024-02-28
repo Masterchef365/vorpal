@@ -4,6 +4,7 @@ use ndarray::NdArray;
 
 pub mod native_backend;
 pub mod ndarray;
+pub mod highlevel;
 
 pub type Scalar = f32;
 pub type Vec2 = [f32; 2];
@@ -81,7 +82,7 @@ pub struct ExternSamplerId(String);
 #[derive(Clone, Debug, PartialEq)]
 pub enum Node {
     ExternInput(ExternInputId, DataType),
-    ExternSampler(ExternSamplerId),
+    //ExternSampler(ExternSamplerId),
     Constant(Value),
     Make(Vec<Rc<Node>>, DataType),
     ComponentInfixOp(Rc<Node>, ComponentInfixOp, Rc<Node>),
