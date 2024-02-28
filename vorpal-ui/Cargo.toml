@@ -14,7 +14,7 @@ vorpal-core = { path = "../vorpal-core" }
 vorpal-wasm = { path = "../vorpal-wasm" }
 vorpal-widgets = { path = "../vorpal-widgets" }
 #wasm-bridge = { git = "https://github.com/kajacx/wasm-bridge.git", branch = "master" }
-wasm-bridge = "0.2.2"
+wasm-bridge = "0.3.0"
 anyhow = "1.0"
 serde = { version = "1.0" }
 bytemuck = "1.14.0"
