@@ -26,6 +26,10 @@ pub enum Swizzle {}
 /// This preserves the identity of each individual node (so its tree will not be copied!)
 type Cache = HashMap<HashRcByPtr<HighNode>, Rc<Node>>;
 
+pub fn convert_node(high: Rc<HighNode>) -> Rc<Node> {
+    convert_rc_highnode(high, &mut HashMap::new())
+}
+
 fn convert_rc_highnode(high: Rc<HighNode>, cache: &mut Cache) -> Rc<Node> {
     if let Some(cached) = cache.get(&HashRcByPtr(high.clone())) {
         // Use the exact same pointer, so that the wasm assembler code using HashRcByPtr later down the line
@@ -35,11 +39,11 @@ fn convert_rc_highnode(high: Rc<HighNode>, cache: &mut Cache) -> Rc<Node> {
         // ... I should just use slotmap instead lol
         cached.clone()
     } else {
-        lower_node(high, cache)
+        lower_node_recursive(high, cache)
     }
 }
 
-fn lower_node(high: Rc<HighNode>, cache: &mut Cache) -> Rc<Node> {
+fn lower_node_recursive(high: Rc<HighNode>, cache: &mut Cache) -> Rc<Node> {
     Rc::new(match Rc::unwrap_or_clone(high) {
         HighNode::ExternInput(id, dtype) => Node::ExternInput(id, dtype),
         HighNode::Constant(value) => Node::Constant(value),
@@ -67,10 +71,4 @@ fn lower_node(high: Rc<HighNode>, cache: &mut Cache) -> Rc<Node> {
         */
         _ => todo!(),
     })
-}
-
-impl From<HighNode> for Node {
-    fn from(value: HighNode) -> Self {
-        Rc::unwrap_or_clone(lower_node(Rc::new(value), &mut HashMap::new()))
-    }
 }
