@@ -89,6 +89,5 @@ pub fn evaluate_node(node: &Node, ctx: &ExternParameters) -> Result<Value, EvalE
             (Value::Vec4(a), Value::Vec4(b)) => Ok(Value::Scalar(dot(&a, &b))),
             _ => Err(EvalError::TypeMismatch),
         },
-        _ => todo!(),
     }
 }

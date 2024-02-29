@@ -1,7 +1,6 @@
 use anyhow::{ensure, Result};
 use std::collections::{HashMap, HashSet};
 use std::fmt::Write;
-use std::hash::{Hash, Hasher};
 use std::rc::Rc;
 use vorpal_core::*;
 
@@ -494,29 +493,8 @@ impl CodeAnalysis {
                     writeln!(text, "local.set ${out_var_id}_{lane}").unwrap();
                 }
             }
-            _ => todo!("Node type {:?}", node.0),
         }
 
         writeln!(text).unwrap();
-    }
-}
-
-/// Instead of hashing by the _contents_ of an Rc smart pointer,
-/// we are hashing by its pointer. This makes it such that we can store
-/// a hashmap containing nodes in a graph.
-#[derive(Clone, Default)]
-struct HashRcByPtr<T>(pub Rc<T>);
-
-impl<T> Hash for HashRcByPtr<T> {
-    fn hash<H: Hasher>(&self, state: &mut H) {
-        Rc::as_ptr(&self.0).hash(state)
-    }
-}
-
-impl<T> Eq for HashRcByPtr<T> {}
-
-impl<T> PartialEq for HashRcByPtr<T> {
-    fn eq(&self, other: &Self) -> bool {
-        Rc::as_ptr(&self.0).eq(&Rc::as_ptr(&other.0))
     }
 }
