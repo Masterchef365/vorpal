@@ -69,3 +69,8 @@ fn lower_node(high: Rc<HighNode>, cache: &mut Cache) -> Rc<Node> {
     })
 }
 
+impl From<HighNode> for Node {
+    fn from(value: HighNode) -> Self {
+        Rc::unwrap_or_clone(lower_node(Rc::new(value), &mut HashMap::new()))
+    }
+}
