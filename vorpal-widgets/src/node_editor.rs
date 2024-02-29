@@ -6,6 +6,7 @@ use std::{
     rc::Rc,
 };
 use vorpal_core::*;
+use vorpal_core::highlevel::HighNode;
 
 const XYZW: [&str; 4] = ["x", "y", "z", "w"];
 
@@ -454,16 +455,16 @@ fn detect_cycle_recursive(graph: &MyGraph, node_id: NodeId, stack: &mut HashSet<
 fn extract_node_from_graph(
     graph: &MyGraph,
     node_id: NodeId,
-) -> anyhow::Result<Rc<vorpal_core::Node>> {
+) -> anyhow::Result<Rc<HighNode>> {
     extract_node_from_graph_recursive(graph, node_id, &mut OutputsCache::new())
 }
 
-// Returns the ID of the vorpal_core::Node corresponding to given parameter of the node "node_id"
+// Returns the ID of the HighNode corresponding to given parameter of the node "node_id"
 fn extract_node_from_graph_recursive(
     graph: &MyGraph,
     node_id: NodeId,
     cache: &mut OutputsCache,
-) -> anyhow::Result<Rc<vorpal_core::Node>> {
+) -> anyhow::Result<Rc<HighNode>> {
     let node = &graph[node_id];
 
     if node.outputs(graph).next().is_some() {
@@ -474,22 +475,22 @@ fn extract_node_from_graph_recursive(
     }
 
     Ok(match &node.user_data.template {
-        MyNodeTemplate::ComponentFn(func, _dtype) => Rc::new(vorpal_core::Node::ComponentFn(
+        MyNodeTemplate::ComponentFn(func, _dtype) => Rc::new(HighNode::ComponentFn(
             *func,
             get_input_node(graph, node_id, "x", cache)?,
         )),
-        MyNodeTemplate::GetComponent(_dtype) => Rc::new(vorpal_core::Node::GetComponent(
+        MyNodeTemplate::GetComponent(_dtype) => Rc::new(HighNode::GetComponent(
             get_input_node(graph, node_id, "value", cache)?,
             get_input_node(graph, node_id, "index", cache)?,
         )),
         MyNodeTemplate::ComponentInfixOp(op, _dtype) => {
-            Rc::new(vorpal_core::Node::ComponentInfixOp(
+            Rc::new(HighNode::ComponentInfixOp(
                 get_input_node(graph, node_id, "x", cache)?,
                 *op,
                 get_input_node(graph, node_id, "y", cache)?,
             ))
         }
-        MyNodeTemplate::Make(dtype) => Rc::new(vorpal_core::Node::Make(
+        MyNodeTemplate::Make(dtype) => Rc::new(HighNode::Make(
             XYZW.iter()
                 .take(dtype.n_lanes())
                 .map(|name| get_input_node(graph, node_id, name, cache))
@@ -497,24 +498,24 @@ fn extract_node_from_graph_recursive(
             *dtype,
         )),
         MyNodeTemplate::Input(name, dtype) => {
-            Rc::new(vorpal_core::Node::ExternInput(name.clone(), *dtype))
+            Rc::new(HighNode::ExternInput(name.clone(), *dtype))
         }
         MyNodeTemplate::Output(_dtype) => get_input_node(graph, node_id, "x", cache)?,
-        MyNodeTemplate::Dot(_dtype) => Rc::new(vorpal_core::Node::Dot(
+        MyNodeTemplate::Dot(_dtype) => Rc::new(HighNode::Dot(
             get_input_node(graph, node_id, "x", cache)?,
             get_input_node(graph, node_id, "y", cache)?,
         )),
     })
 }
 
-type OutputsCache = HashMap<OutputId, Rc<vorpal_core::Node>>;
+type OutputsCache = HashMap<OutputId, Rc<HighNode>>;
 
 fn get_input_node(
     graph: &MyGraph,
     node_id: NodeId,
     param_name: &str,
     cache: &mut OutputsCache,
-) -> anyhow::Result<Rc<vorpal_core::Node>> {
+) -> anyhow::Result<Rc<HighNode>> {
     let input_id = graph[node_id].get_input(param_name)?;
 
     // The output of another node is connected.
@@ -526,7 +527,7 @@ fn get_input_node(
     // No existing connection, take the inline value instead.
     else {
         let NodeGuiValue(value) = graph[input_id].value;
-        Ok(Rc::new(vorpal_core::Node::Constant(value)))
+        Ok(Rc::new(HighNode::Constant(value)))
     }
 }
 
@@ -621,7 +622,7 @@ impl NodeGraphWidget {
         }
     }
 
-    pub fn extract_active_node(&mut self) -> anyhow::Result<Option<Rc<vorpal_core::Node>>> {
+    pub fn extract_active_node(&mut self) -> anyhow::Result<Option<Rc<HighNode>>> {
         if let Some(node) = self.user_state.active_node {
             if self.state.graph.nodes.contains_key(node) {
                 if detect_cycle(&self.state.graph, node) {
@@ -639,7 +640,7 @@ impl NodeGraphWidget {
         }
     }
 
-    pub fn extract_output_node(&mut self) -> Rc<vorpal_core::Node> {
+    pub fn extract_output_node(&mut self) -> Rc<HighNode> {
         let node_id = self
             .state
             .graph
