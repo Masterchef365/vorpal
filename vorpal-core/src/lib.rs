@@ -82,13 +82,13 @@ pub struct ExternSamplerId(String);
 #[derive(Clone, Debug, PartialEq)]
 pub enum Node {
     ExternInput(ExternInputId, DataType),
-    //ExternSampler(ExternSamplerId),
     Constant(Value),
     Make(Vec<Rc<Node>>, DataType),
     ComponentInfixOp(Rc<Node>, ComponentInfixOp, Rc<Node>),
     ComponentFn(ComponentFn, Rc<Node>),
     GetComponent(Rc<Node>, Rc<Node>),
     Dot(Rc<Node>, Rc<Node>),
+    //ExternSampler(ExternSamplerId),
 }
 
 /// Sampler(A, B, C), samples ndarray A with a coordinate of vector B and returns vector C
