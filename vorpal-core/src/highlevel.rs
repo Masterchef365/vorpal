@@ -18,11 +18,18 @@ pub enum HighNode {
     // New stuff!
     Normalize(Rc<HighNode>, DataType),
     Splat(Rc<HighNode>, DataType),
-    Swizzle(Swizzle, Rc<HighNode>),
+    /// Convert one datatype to another and/or rearrange components
+    Swizzle {
+        /// Input data
+        input_vector: Rc<HighNode>,
+        /// Input indices
+        component_vector: Rc<HighNode>,
+        /// Input vector datatype
+        input_vector_dtype: DataType,
+        /// Matches component vector dtype
+        output_vector_dtype: DataType,
+    },
 }
-
-#[derive(Clone, Debug)]
-pub enum Swizzle {}
 
 /// This preserves the identity of each individual node (so its tree will not be copied!)
 type Cache = HashMap<HashRcByPtr<HighNode>, Rc<Node>>;
@@ -96,6 +103,26 @@ fn lower_node_recursive(high: Rc<HighNode>, cache: &mut Cache) -> Rc<Node> {
 
             convert_rc_highnode(normed, cache)
         }
-        _ => todo!(),
+        HighNode::Swizzle {
+            input_vector,
+            component_vector,
+            input_vector_dtype,
+            output_vector_dtype,
+        } => convert_rc_highnode(
+            Rc::new(HighNode::Make(
+                (0..output_vector_dtype.n_lanes()).map(|lane_idx| {
+                    Rc::new(HighNode::GetComponent(
+                        input_vector.clone(),
+                        Rc::new(HighNode::GetComponent(
+                            component_vector.clone(),
+                            Rc::new(HighNode::Constant(Value::Scalar(lane_idx as f32))),
+                        )),
+                    ))
+                })
+                .collect(),
+                output_vector_dtype,
+            )),
+            cache,
+        ),
     }
 }
