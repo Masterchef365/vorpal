@@ -49,6 +49,7 @@ pub enum MyNodeTemplate {
     Output(DataType),
     Dot(DataType),
     Normalize(DataType),
+    Splat(DataType),
 }
 
 /// The response type is used to encode side-effects produced when drawing a
@@ -106,6 +107,7 @@ impl NodeTemplateTrait for MyNodeTemplate {
 
     fn node_finder_label(&self, _user_state: &mut Self::UserState) -> Cow<'_, str> {
         Cow::Owned(match self {
+            Self::Splat(dtype) => format!("Splat {dtype}"),
             Self::Normalize(dtype) => format!("Normalize {dtype}"),
             Self::Make(dtype) => format!("Make {dtype}"),
             Self::ComponentInfixOp(_infix, dtype) => format!("Operator ({dtype})"),
@@ -121,6 +123,7 @@ impl NodeTemplateTrait for MyNodeTemplate {
     fn node_finder_categories(&self, _user_state: &mut Self::UserState) -> Vec<&'static str> {
         match self {
             MyNodeTemplate::Make(dtype)
+            | MyNodeTemplate::Splat(dtype)
             | MyNodeTemplate::ComponentInfixOp(_, dtype)
             | MyNodeTemplate::ComponentFn(_, dtype)
             | MyNodeTemplate::GetComponent(dtype)
@@ -176,6 +179,10 @@ impl NodeTemplateTrait for MyNodeTemplate {
                 }
                 add_output(graph, "out", *dtype);
             }
+            MyNodeTemplate::Splat(dtype) => {
+                add_input(graph, "x", DataType::Scalar);
+                add_output(graph, "out", *dtype);
+            }
             MyNodeTemplate::ComponentFn(_func, dtype) => {
                 add_input(graph, "x", *dtype);
                 add_output(graph, "out", *dtype);
@@ -222,6 +229,7 @@ impl NodeTemplateIter for AllMyNodeTemplates<'_> {
         // boilerplate in enumerating all variants of an enum.
         let mut types = vec![];
         for dtype in DataType::all() {
+            types.push(MyNodeTemplate::Splat(dtype));
             types.push(MyNodeTemplate::Normalize(dtype));
             types.push(MyNodeTemplate::Make(dtype));
             types.push(MyNodeTemplate::ComponentInfixOp(
@@ -509,6 +517,10 @@ fn extract_node_from_graph_recursive(
             get_input_node(graph, node_id, "x", cache)?,
             *dtype,
         )),
+        MyNodeTemplate::Splat(dtype) => Rc::new(HighNode::Splat(
+            get_input_node(graph, node_id, "x", cache)?,
+            *dtype,
+        )),
     })
 }
 
@@ -673,6 +685,7 @@ impl Default for NodeGraphWidget {
 }
 
 impl MyNodeTemplate {
+    /*
     fn set_datatype(&mut self, input: DataType) {
         match self {
             MyNodeTemplate::Input(_, dtype)
@@ -685,10 +698,12 @@ impl MyNodeTemplate {
             | MyNodeTemplate::Dot(dtype) => *dtype = input,
         }
     }
+    */
 
     fn get_datatype(&self) -> Option<DataType> {
         match self {
             MyNodeTemplate::Input(_, dtype)
+            | MyNodeTemplate::Splat(dtype)
             | MyNodeTemplate::Make(dtype)
             | MyNodeTemplate::ComponentInfixOp(_, dtype)
             | MyNodeTemplate::ComponentFn(_, dtype)
