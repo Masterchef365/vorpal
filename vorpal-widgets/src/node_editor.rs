@@ -5,8 +5,8 @@ use std::{
     collections::{HashMap, HashSet},
     rc::Rc,
 };
-use vorpal_core::*;
 use vorpal_core::highlevel::HighNode;
+use vorpal_core::*;
 
 const XYZW: [&str; 4] = ["x", "y", "z", "w"];
 
@@ -48,6 +48,7 @@ pub enum MyNodeTemplate {
     GetComponent(DataType),
     Output(DataType),
     Dot(DataType),
+    Normalize(DataType),
 }
 
 /// The response type is used to encode side-effects produced when drawing a
@@ -105,6 +106,7 @@ impl NodeTemplateTrait for MyNodeTemplate {
 
     fn node_finder_label(&self, _user_state: &mut Self::UserState) -> Cow<'_, str> {
         Cow::Owned(match self {
+            Self::Normalize(dtype) => format!("Normalize {dtype}"),
             Self::Make(dtype) => format!("Make {dtype}"),
             Self::ComponentInfixOp(_infix, dtype) => format!("Operator ({dtype})"),
             Self::ComponentFn(_func, dtype) => format!("Function ({dtype})"),
@@ -122,6 +124,7 @@ impl NodeTemplateTrait for MyNodeTemplate {
             | MyNodeTemplate::ComponentInfixOp(_, dtype)
             | MyNodeTemplate::ComponentFn(_, dtype)
             | MyNodeTemplate::GetComponent(dtype)
+            | MyNodeTemplate::Normalize(dtype)
             | MyNodeTemplate::Dot(dtype) => vec![dtype.dtype_name()],
             MyNodeTemplate::Input(_name, dtype) => vec!["Input", dtype.dtype_name()],
             MyNodeTemplate::Output(_) => vec![],
@@ -198,6 +201,10 @@ impl NodeTemplateTrait for MyNodeTemplate {
                 add_input(graph, "y", *dtype);
                 add_output(graph, "out", DataType::Scalar);
             }
+            MyNodeTemplate::Normalize(dtype) => {
+                add_input(graph, "x", *dtype);
+                add_output(graph, "out", DataType::Vec2);
+            }
         }
     }
 }
@@ -215,6 +222,7 @@ impl NodeTemplateIter for AllMyNodeTemplates<'_> {
         // boilerplate in enumerating all variants of an enum.
         let mut types = vec![];
         for dtype in DataType::all() {
+            types.push(MyNodeTemplate::Normalize(dtype));
             types.push(MyNodeTemplate::Make(dtype));
             types.push(MyNodeTemplate::ComponentInfixOp(
                 ComponentInfixOp::Add,
@@ -302,7 +310,6 @@ fn premultiplied_srgba_edit(ui: &mut Ui, value: &mut [f32; 4]) {
         *value = srgba.to_array().map(|v| v as f32 / 256.);
     }
 }
-
 
 impl UserResponseTrait for MyResponse {}
 impl NodeDataTrait for MyNodeData {
@@ -452,10 +459,7 @@ fn detect_cycle_recursive(graph: &MyGraph, node_id: NodeId, stack: &mut HashSet<
     false
 }
 
-fn extract_node_from_graph(
-    graph: &MyGraph,
-    node_id: NodeId,
-) -> anyhow::Result<Rc<HighNode>> {
+fn extract_node_from_graph(graph: &MyGraph, node_id: NodeId) -> anyhow::Result<Rc<HighNode>> {
     extract_node_from_graph_recursive(graph, node_id, &mut OutputsCache::new())
 }
 
@@ -483,13 +487,11 @@ fn extract_node_from_graph_recursive(
             get_input_node(graph, node_id, "value", cache)?,
             get_input_node(graph, node_id, "index", cache)?,
         )),
-        MyNodeTemplate::ComponentInfixOp(op, _dtype) => {
-            Rc::new(HighNode::ComponentInfixOp(
-                get_input_node(graph, node_id, "x", cache)?,
-                *op,
-                get_input_node(graph, node_id, "y", cache)?,
-            ))
-        }
+        MyNodeTemplate::ComponentInfixOp(op, _dtype) => Rc::new(HighNode::ComponentInfixOp(
+            get_input_node(graph, node_id, "x", cache)?,
+            *op,
+            get_input_node(graph, node_id, "y", cache)?,
+        )),
         MyNodeTemplate::Make(dtype) => Rc::new(HighNode::Make(
             XYZW.iter()
                 .take(dtype.n_lanes())
@@ -497,13 +499,15 @@ fn extract_node_from_graph_recursive(
                 .collect::<Result<_, _>>()?,
             *dtype,
         )),
-        MyNodeTemplate::Input(name, dtype) => {
-            Rc::new(HighNode::ExternInput(name.clone(), *dtype))
-        }
+        MyNodeTemplate::Input(name, dtype) => Rc::new(HighNode::ExternInput(name.clone(), *dtype)),
         MyNodeTemplate::Output(_dtype) => get_input_node(graph, node_id, "x", cache)?,
         MyNodeTemplate::Dot(_dtype) => Rc::new(HighNode::Dot(
             get_input_node(graph, node_id, "x", cache)?,
             get_input_node(graph, node_id, "y", cache)?,
+        )),
+        MyNodeTemplate::Normalize(dtype) => Rc::new(HighNode::Normalize(
+            get_input_node(graph, node_id, "x", cache)?,
+            *dtype,
         )),
     })
 }
@@ -677,6 +681,7 @@ impl MyNodeTemplate {
             | MyNodeTemplate::ComponentFn(_, dtype)
             | MyNodeTemplate::GetComponent(dtype)
             | MyNodeTemplate::Output(dtype)
+            | MyNodeTemplate::Normalize(dtype)
             | MyNodeTemplate::Dot(dtype) => *dtype = input,
         }
     }
@@ -689,6 +694,7 @@ impl MyNodeTemplate {
             | MyNodeTemplate::ComponentFn(_, dtype)
             | MyNodeTemplate::GetComponent(dtype)
             | MyNodeTemplate::Output(dtype)
+            | MyNodeTemplate::Normalize(dtype)
             | MyNodeTemplate::Dot(dtype) => Some(*dtype),
         }
     }
