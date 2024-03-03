@@ -50,6 +50,7 @@ pub enum MyNodeTemplate {
     Dot(DataType),
     Normalize(DataType),
     Splat(DataType),
+    Swizzle(DataType, DataType),
 }
 
 /// The response type is used to encode side-effects produced when drawing a
@@ -116,6 +117,7 @@ impl NodeTemplateTrait for MyNodeTemplate {
             Self::Input(name, dtype) => format!("Input {name} ({dtype})"),
             Self::Output(dtype) => format!("Output ({dtype})"),
             Self::Dot(dtype) => format!("Dot ({dtype})"),
+            Self::Swizzle(dtype, other_dtype) => format!("Swizzle {dtype} -> {other_dtype}"),
         })
     }
 
@@ -130,6 +132,10 @@ impl NodeTemplateTrait for MyNodeTemplate {
             | MyNodeTemplate::Normalize(dtype)
             | MyNodeTemplate::Dot(dtype) => vec![dtype.dtype_name()],
             MyNodeTemplate::Input(_name, dtype) => vec!["Input", dtype.dtype_name()],
+            MyNodeTemplate::Swizzle(dtype, other_dtype) => {
+                //vec![dtype.dtype_name(), other_dtype.dtype_name()]
+                vec![]
+            }
             MyNodeTemplate::Output(_) => vec![],
         }
     }
@@ -212,6 +218,11 @@ impl NodeTemplateTrait for MyNodeTemplate {
                 add_input(graph, "x", *dtype);
                 add_output(graph, "out", DataType::Vec2);
             }
+            MyNodeTemplate::Swizzle(input_dtype, output_dtype) => {
+                add_input(graph, "x", *input_dtype);
+                add_input(graph, "indices", *output_dtype);
+                add_output(graph, "out", *output_dtype);
+            }
         }
     }
 }
@@ -241,6 +252,9 @@ impl NodeTemplateIter for AllMyNodeTemplates<'_> {
             }
             types.push(MyNodeTemplate::ComponentFn(ComponentFn::NaturalLog, dtype));
             types.push(MyNodeTemplate::Dot(dtype));
+            for other_dtype in DataType::all() {
+                types.push(MyNodeTemplate::Swizzle(dtype, other_dtype));
+            }
         }
 
         for (id, dtype) in self.params.inputs() {
@@ -521,6 +535,12 @@ fn extract_node_from_graph_recursive(
             get_input_node(graph, node_id, "x", cache)?,
             *dtype,
         )),
+        MyNodeTemplate::Swizzle(input_dtype, output_dtype) => Rc::new(HighNode::Swizzle {
+            input_vector: get_input_node(graph, node_id, "x", cache)?,
+            component_vector: get_input_node(graph, node_id, "indices", cache)?,
+            input_vector_dtype: *input_dtype,
+            output_vector_dtype: *output_dtype,
+        }),
     })
 }
 
@@ -710,6 +730,7 @@ impl MyNodeTemplate {
             | MyNodeTemplate::GetComponent(dtype)
             | MyNodeTemplate::Output(dtype)
             | MyNodeTemplate::Normalize(dtype)
+            | MyNodeTemplate::Swizzle(_, dtype)
             | MyNodeTemplate::Dot(dtype) => Some(*dtype),
         }
     }
