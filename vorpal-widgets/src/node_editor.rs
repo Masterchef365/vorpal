@@ -132,9 +132,16 @@ impl NodeTemplateTrait for MyNodeTemplate {
             | MyNodeTemplate::Normalize(dtype)
             | MyNodeTemplate::Dot(dtype) => vec![dtype.dtype_name()],
             MyNodeTemplate::Input(_name, dtype) => vec!["Input", dtype.dtype_name()],
-            MyNodeTemplate::Swizzle(dtype, other_dtype) => {
+            MyNodeTemplate::Swizzle(dtype, _other_dtype) => {
                 //vec![dtype.dtype_name(), other_dtype.dtype_name()]
-                vec![]
+                match dtype {
+                    // Don't bother showing the swizzles that result in a scalar; 
+                    // these are already GetComponent
+                    DataType::Scalar => vec![],
+                    DataType::Vec2 => vec!["Swizzle Vec2"],
+                    DataType::Vec3 => vec!["Swizzle Vec3"],
+                    DataType::Vec4 => vec!["Swizzle Vec4"],
+                }
             }
             MyNodeTemplate::Output(_) => vec![],
         }
@@ -252,8 +259,10 @@ impl NodeTemplateIter for AllMyNodeTemplates<'_> {
             }
             types.push(MyNodeTemplate::ComponentFn(ComponentFn::NaturalLog, dtype));
             types.push(MyNodeTemplate::Dot(dtype));
-            for other_dtype in DataType::all() {
-                types.push(MyNodeTemplate::Swizzle(dtype, other_dtype));
+            for output_dtype in DataType::all() {
+                if output_dtype != DataType::Scalar {
+                    types.push(MyNodeTemplate::Swizzle(dtype, output_dtype));
+                }
             }
         }
 
