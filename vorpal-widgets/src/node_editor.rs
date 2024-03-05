@@ -605,7 +605,7 @@ impl NodeGraphWidget {
 
         state.node_positions.insert(id, egui::Pos2::ZERO);
         state.node_order.push(id);
-        MyNodeTemplate::Output(DataType::Vec4).build_node(&mut state.graph, &mut user_state, id);
+        MyNodeTemplate::Output(output_dtype).build_node(&mut state.graph, &mut user_state, id);
 
         Self {
             params,
