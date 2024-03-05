@@ -11,7 +11,7 @@ use eframe::{
     epaint::Color32,
 };
 use ndarray::*;
-use vorpal_core::{ndarray, DataType, ExternInputId, ExternParameters, ParameterList, Value, Vec2};
+use vorpal_core::{ndarray, DataType, ExternInputId, ExternParameters, ParameterList, Value, Vec2, highlevel};
 
 use vorpal_ui::wasmtime_integration::{NodeGraphs, VorpalWasmtime};
 use vorpal_widgets::{
@@ -200,7 +200,7 @@ impl eframe::App for VorpalApp {
                 .map(|(name, widget)| {
                     (
                         name.clone(),
-                        widget.extract_output_node(),
+                        highlevel::convert_node(widget.extract_output_node()),
                         widget.params().clone(),
                     )
                 })
