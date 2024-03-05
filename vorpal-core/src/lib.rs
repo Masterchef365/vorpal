@@ -42,6 +42,7 @@ pub enum ComponentInfixOp {
     Logbase,
     GreaterThan,
     LessThan,
+    EqualTo,
 }
 
 /// Function on components
@@ -135,6 +136,7 @@ impl std::fmt::Display for ComponentInfixOp {
             Self::Logbase => "logbase",
             Self::GreaterThan => "greater than",
             Self::LessThan => "less than",
+            Self::EqualTo => "equal to",
         };
         write!(f, "{}", name)
     }
@@ -238,7 +240,7 @@ impl ComponentFn {
 }
 
 impl ComponentInfixOp {
-    pub fn all() -> [Self; 8] {
+    pub fn all() -> [Self; 9] {
         [
             Self::Add,
             Self::Subtract,
@@ -248,6 +250,7 @@ impl ComponentInfixOp {
             Self::Logbase,
             Self::GreaterThan,
             Self::LessThan,
+            Self::EqualTo,
         ]
     }
 
@@ -261,6 +264,7 @@ impl ComponentInfixOp {
             Self::Logbase => a.log(b),
             Self::GreaterThan => f32::from(a > b),
             Self::LessThan => f32::from(a < b),
+            Self::EqualTo => f32::from(a == b),
         }
     }
 
@@ -274,6 +278,7 @@ impl ComponentInfixOp {
             Self::Logbase => "logbase",
             Self::GreaterThan => ">",
             Self::LessThan => "<",
+            Self::EqualTo => "=",
         }
     }
 }

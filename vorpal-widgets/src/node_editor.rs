@@ -247,7 +247,10 @@ impl NodeTemplateIter for AllMyNodeTemplates<'_> {
         // boilerplate in enumerating all variants of an enum.
         let mut types = vec![];
         for dtype in DataType::all() {
-            types.push(MyNodeTemplate::Splat(dtype));
+            // Redundant
+            if dtype != DataType::Scalar {
+                types.push(MyNodeTemplate::Splat(dtype));
+            }
             types.push(MyNodeTemplate::Normalize(dtype));
             types.push(MyNodeTemplate::Make(dtype));
             types.push(MyNodeTemplate::ComponentInfixOp(
@@ -255,15 +258,18 @@ impl NodeTemplateIter for AllMyNodeTemplates<'_> {
                 dtype,
             ));
             if dtype != DataType::Scalar {
+                // Redundant
                 types.push(MyNodeTemplate::GetComponent(dtype));
+
+                // Handled by splat
+                for output_dtype in DataType::all() {
+                    if output_dtype != DataType::Scalar {
+                        types.push(MyNodeTemplate::Swizzle(dtype, output_dtype));
+                    }
+                }
             }
             types.push(MyNodeTemplate::ComponentFn(ComponentFn::NaturalLog, dtype));
             types.push(MyNodeTemplate::Dot(dtype));
-            for output_dtype in DataType::all() {
-                if output_dtype != DataType::Scalar {
-                    types.push(MyNodeTemplate::Swizzle(dtype, output_dtype));
-                }
-            }
         }
 
         for (id, dtype) in self.params.inputs() {
