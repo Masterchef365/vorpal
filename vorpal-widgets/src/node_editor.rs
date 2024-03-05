@@ -592,16 +592,16 @@ impl Default for NodeGuiValue {
 
 impl NodeGraphWidget {
     /// Create a new nodegraph widget with the given input list
-    pub fn new(params: ParameterList) -> Self {
+    pub fn new(params: ParameterList, output_dtype: DataType, output_name: String) -> Self {
         let mut state: MyEditorState = MyEditorState::default();
         let mut user_state: MyGraphState = Default::default();
 
-        let output = MyNodeTemplate::Output(DataType::Vec4);
+        let output = MyNodeTemplate::Output(output_dtype);
 
         let template = output.clone();
         let id = state
             .graph
-            .add_node("Output".into(), MyNodeData { template }, |_, _| ());
+            .add_node(output_name, MyNodeData { template }, |_, _| ());
 
         state.node_positions.insert(id, egui::Pos2::ZERO);
         state.node_order.push(id);
@@ -710,12 +710,6 @@ fn undo_if_cycle(input_id: InputId, graph: &mut MyGraph) {
     let node_id = graph.get_input(input_id).node;
     if detect_cycle(graph, node_id) {
         graph.remove_connection(input_id);
-    }
-}
-
-impl Default for NodeGraphWidget {
-    fn default() -> Self {
-        Self::new(Default::default())
     }
 }
 

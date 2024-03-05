@@ -82,7 +82,7 @@ fn image_fn_inputs() -> ParameterList {
 
 impl Default for SaveState {
     fn default() -> Self {
-        let nodes = NodeGraphWidget::new(image_fn_inputs());
+        let nodes = new_widget();
         Self {
             user_wasm_path: Some("target/wasm32-unknown-unknown/release/vorpal_image.wasm".into()),
             functions: [("kernel".to_string(), nodes)].into_iter().collect(),
@@ -314,7 +314,7 @@ impl eframe::App for VorpalApp {
 
                     self.saved
                         .functions
-                        .push(("unnamed".into(), NodeGraphWidget::new(image_fn_inputs())));
+                        .push(("unnamed".into(), new_widget()));
                 }
 
                 if let Some(idx) = remove {
@@ -527,12 +527,16 @@ impl SaveState {
     }
 }
 
+fn new_widget() -> NodeGraphWidget {
+    NodeGraphWidget::new(image_fn_inputs(), DataType::Vec4, "RGBA".into())
+}
+
 impl SaveState {
     pub fn selected_fn_widget(&mut self) -> &mut NodeGraphWidget {
         if self.functions.is_empty() {
             self.functions.push((
                 "unnamed".to_string(),
-                NodeGraphWidget::new(image_fn_inputs()),
+                new_widget()
             ));
         }
 
