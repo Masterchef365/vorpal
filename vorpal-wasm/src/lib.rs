@@ -425,6 +425,7 @@ impl CodeAnalysis {
                         ComponentInfixOp::Subtract => "f32.sub",
                         ComponentInfixOp::Divide => "f32.div",
                         ComponentInfixOp::Multiply => "f32.mul",
+                        ComponentInfixOp::EqualTo => "f32.eq",
                         ComponentInfixOp::Power => "call $builtin_power",
                         ComponentInfixOp::Logbase => "call $builtin_logbase",
                         ComponentInfixOp::GreaterThan => "call $builtin_greater_than",
