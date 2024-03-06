@@ -80,7 +80,7 @@ pub struct ExternInputId(String);
 #[derive(Clone, Debug, PartialEq, Eq, Hash)]
 pub struct ExternSamplerId(String);
 
-#[cfg_attr(feature = "persistence", derive(serde::Serialize, serde::Deserialize))]
+//#[cfg_attr(feature = "persistence", derive(serde::Serialize, serde::Deserialize))]
 #[derive(Clone, Debug, PartialEq)]
 pub enum Node {
     ExternInput(ExternInputId, DataType),

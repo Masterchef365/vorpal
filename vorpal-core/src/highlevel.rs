@@ -106,7 +106,7 @@ fn lower_node_recursive(high: Rc<HighNode>, cache: &mut Cache) -> Rc<Node> {
         HighNode::Swizzle {
             input_vector,
             component_vector,
-            input_vector_dtype,
+            input_vector_dtype: _,
             output_vector_dtype,
         } => convert_rc_highnode(
             Rc::new(HighNode::Make(
