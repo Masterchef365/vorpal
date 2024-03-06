@@ -12,6 +12,7 @@ pub const POS_KEY: &str = "Position (pixels)";
 pub const RESOLUTION_KEY: &str = "Resolution (pixels)";
 pub const CURSOR_KEY: &str = "Cursor position (pixels)";
 
+/*
 #[cfg(target_arch = "wasm32")]
 use eframe::wasm_bindgen::{self, prelude::*};
 
@@ -25,3 +26,4 @@ pub fn start(canvas_id: &str) -> Result<(), eframe::wasm_bindgen::JsValue> {
     let app = NodeGraphExample::default();
     eframe::start_web(canvas_id, Box::new(app))
 }
+*/
