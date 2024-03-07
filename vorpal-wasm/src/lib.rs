@@ -4,9 +4,6 @@ use std::fmt::Write;
 use std::rc::Rc;
 use vorpal_core::*;
 
-pub const BUILTINS_WASM: &[u8] =
-    include_bytes!("../../target/wasm32-unknown-unknown/release/vorpal_wasm_builtins.wasm");
-
 /// Denotes the "name" of a local variable; e.g. local.get 9
 type LocalVarId = u32;
 

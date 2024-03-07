@@ -6,6 +6,9 @@ use wasm_bridge::*;
 
 use crate::file_watcher::FileWatcher;
 
+const BUILTINS_WASM: &[u8] =
+    include_bytes!("../../target/wasm32-unknown-unknown/release/vorpal_wasm_builtins.wasm");
+
 // TODO:
 // Change Value to something like VectorValue<T, const N: usize>([T; N]);
 // * Other datatypes
@@ -186,7 +189,7 @@ impl VorpalWasmtime {
     }
 
     fn builtins_module(&self) -> Result<Module> {
-        Ok(Module::new(&self.wasm_engine, vorpal_wasm::BUILTINS_WASM)?)
+        Ok(Module::new(&self.wasm_engine, BUILTINS_WASM)?)
     }
 
     fn image_module(&mut self) -> Result<Module> {
