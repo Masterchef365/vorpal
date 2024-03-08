@@ -47,16 +47,12 @@ impl CodeAnalysis {
             .push(InputParameter::OutputPointer(input_ptr));
 
         // Add the rest of the parameters
-        let mut sorted_inputs: Vec<InputParameter> = extern_inputs
+        let extern_vars = extern_inputs
             .0
             .iter()
-            .map(|(id, ty)| InputParameter::ExternalVariable(id.clone(), *ty))
-            .collect();
-        sorted_inputs.sort_by_cached_key(|s| match s {
-            InputParameter::OutputPointer(_) => unreachable!(),
-            InputParameter::ExternalVariable(id, _) => id.clone(),
-        });
-        instance.input_list.extend(sorted_inputs);
+            .map(|(id, ty)| InputParameter::ExternalVariable(id.clone(), *ty));
+
+        instance.input_list.extend(extern_vars);
 
         instance.find_inputs_and_locals_recursive(instance.root.clone());
 
