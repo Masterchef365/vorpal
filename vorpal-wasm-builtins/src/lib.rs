@@ -42,3 +42,9 @@ pub extern "C" fn greater_than(lhs: f32, rhs: f32) -> f32 {
 pub extern "C" fn less_than(lhs: f32, rhs: f32) -> f32 {
     f32::from(lhs < rhs)
 }
+
+#[no_mangle]
+pub extern "C" fn equal_to(lhs: f32, rhs: f32) -> f32 {
+    f32::from(lhs == rhs)
+}
+

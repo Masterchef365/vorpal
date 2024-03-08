@@ -250,7 +250,8 @@ impl CodeAnalysis {
 (import "builtins" "power" (func $builtin_power (param f32 f32) (result f32)))
 (import "builtins" "logbase" (func $builtin_logbase (param f32 f32) (result f32)))
 (import "builtins" "greater_than" (func $builtin_greater_than (param f32 f32) (result f32)))
-(import "builtins" "less_than" (func $builtin_less_than (param f32 f32) (result f32)))"#;
+(import "builtins" "less_than" (func $builtin_less_than (param f32 f32) (result f32)))
+(import "builtins" "equal_to" (func $equal_to (param f32 f32) (result f32)))"#;
 
         let module_text = format!(
             r#"(module
@@ -432,7 +433,7 @@ impl CodeAnalysis {
                         ComponentInfixOp::Subtract => "f32.sub",
                         ComponentInfixOp::Divide => "f32.div",
                         ComponentInfixOp::Multiply => "f32.mul",
-                        ComponentInfixOp::EqualTo => "f32.eq",
+                        ComponentInfixOp::EqualTo => "call $builtin_equal_to",
                         ComponentInfixOp::Power => "call $builtin_power",
                         ComponentInfixOp::Logbase => "call $builtin_logbase",
                         ComponentInfixOp::GreaterThan => "call $builtin_greater_than",
