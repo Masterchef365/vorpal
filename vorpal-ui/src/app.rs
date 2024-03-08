@@ -327,14 +327,15 @@ impl eframe::App for VorpalApp {
 
                 let param_list = self.saved.selected_fn_widget().params_mut();
 
-                let mut ordered: Vec<ExternInputId> = param_list.0.keys().cloned().collect();
+                let mut ordered: Vec<ExternInputId> = param_list.0.iter().map(|(id, _)| id.clone()).collect();
                 ordered.sort();
 
                 let mut delete = None;
                 for (idx, id) in ordered.iter().enumerate() {
                     ui.horizontal(|ui| {
                         ui.label(id.to_string());
-                        dtype_selector(idx, ui, param_list.0.get_mut(id).unwrap());
+                        let selected = param_list.0.iter_mut().find_map(|(p_id, dtype)| (p_id == id).then(|| dtype)).unwrap();
+                        dtype_selector(idx, ui, selected);
                         if ui.button("delete").clicked() {
                             delete = Some(idx);
                         }
@@ -342,14 +343,15 @@ impl eframe::App for VorpalApp {
                 }
 
                 if let Some(idx) = delete {
-                    param_list.0.remove(&ordered[idx]);
+                    let to_remove = &ordered[idx];
+                    param_list.0.retain(|(id, _)| id != to_remove);
                 }
 
                 ui.horizontal(|ui| {
                     if ui.button("Add").clicked() {
                         param_list
                             .0
-                            .insert(ExternInputId::new(self.add_param.clone()), self.add_dtype);
+                            .push((ExternInputId::new(self.add_param.clone()), self.add_dtype));
                     }
                     ui.text_edit_singleline(&mut self.add_param);
                     dtype_selector(99999, ui, &mut self.add_dtype)
