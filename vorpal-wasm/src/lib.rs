@@ -164,7 +164,7 @@ impl CodeAnalysis {
     }
 
     /// Compile this analysis to webassembly
-    pub fn compile_to_wat(&self, func_name: &str) -> Result<String> {
+    pub fn compile_function_to_wat(&self, func_name: &str) -> Result<String> {
         // Build parameter list
         let mut input_var_ids = HashSet::new();
         for input_param in &self.input_list {
@@ -212,6 +212,35 @@ impl CodeAnalysis {
             writeln!(&mut output_stack_text, "f32.store offset={offset}").unwrap();
         }
 
+        let func_text = format!(
+            r#"{func_decl}
+
+;; Local variables
+{locals_text}
+;; == Compiled function (main program) ==
+{function_body_text}
+;; == Output stacking ==
+{output_stack_text}
+;; == Function end ==
+  )
+"#
+        );
+
+        /*
+        let lined_text: String = module_text
+        .lines()
+        .enumerate()
+        .map(|(idx, line)| format!("{:>4}: {:}\n", idx + 1, line))
+        .collect();
+        eprintln!("{}", lined_text);
+        */
+
+        Ok(func_text)
+    }
+
+    pub fn compile_to_wat(&self, func_name: &str) -> Result<String> {
+        let func = self.compile_function_to_wat(func_name)?;
+
         let builtin_imports = r#"(import "builtins" "sine" (func $builtin_sine (param f32) (result f32)))
 (import "builtins" "cosine" (func $builtin_cosine (param f32) (result f32)))
 (import "builtins" "tangent" (func $builtin_tangent (param f32) (result f32)))
@@ -230,29 +259,10 @@ impl CodeAnalysis {
 ;; == External imports ==
 {builtin_imports}
 
-;; == Function declaration ==
-{func_decl}
-
-;; Local variables
-{locals_text}
-;; == Compiled function (main program) ==
-{function_body_text}
-;; == Output stacking ==
-{output_stack_text}
-;; == Function end ==
-  )
+{func}
   (export "{func_name}" (func ${func_name}))
 )"#
         );
-
-        /*
-        let lined_text: String = module_text
-        .lines()
-        .enumerate()
-        .map(|(idx, line)| format!("{:>4}: {:}\n", idx + 1, line))
-        .collect();
-        eprintln!("{}", lined_text);
-        */
 
         Ok(module_text)
     }
