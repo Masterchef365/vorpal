@@ -68,7 +68,7 @@ pub enum EvalError {
 /// Names and corresponding datatype for each parameter
 #[cfg_attr(feature = "persistence", derive(serde::Serialize, serde::Deserialize))]
 #[derive(Debug, Clone, Default, PartialEq, Eq)]
-pub struct ParameterList(pub HashMap<ExternInputId, DataType>);
+pub struct ParameterList(pub Vec<(ExternInputId, DataType)>);
 
 /// Unique name of external value input
 #[cfg_attr(feature = "persistence", derive(serde::Serialize, serde::Deserialize))]
@@ -396,7 +396,7 @@ impl Value {
 }
 
 impl ParameterList {
-    pub fn inputs(&self) -> &HashMap<ExternInputId, DataType> {
+    pub fn inputs(&self) -> &[(ExternInputId, DataType)] {
         &self.0
     }
 }
