@@ -13,6 +13,7 @@ const XYZW: [&str; 4] = ["x", "y", "z", "w"];
 /// Widget allowing the user to interactively design
 /// a function using a node and connection paradigm
 #[cfg_attr(feature = "persistence", derive(serde::Serialize, serde::Deserialize))]
+#[derive(Clone)]
 pub struct NodeGraphWidget {
     params: ParameterList,
     state: MyEditorState,
@@ -27,6 +28,7 @@ pub type MyEditorState =
 /// store additional information that doesn't live in parameters. For this
 /// example, the node data stores the template (i.e. the "type") of the node.
 #[cfg_attr(feature = "persistence", derive(serde::Serialize, serde::Deserialize))]
+#[derive(Clone)]
 pub struct MyNodeData {
     template: MyNodeTemplate,
 }
@@ -68,7 +70,7 @@ pub enum MyResponse {
 /// The graph 'global' state. This state struct is passed around to the node and
 /// parameter drawing callbacks. The contents of this struct are entirely up to
 /// the user. For this example, we use it to keep track of the 'active' node.
-#[derive(Default)]
+#[derive(Default, Clone)]
 #[cfg_attr(feature = "persistence", derive(serde::Serialize, serde::Deserialize))]
 pub struct MyGraphState {
     active_node: Option<NodeId>,
