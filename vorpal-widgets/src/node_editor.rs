@@ -60,12 +60,13 @@ pub enum MyNodeTemplate {
 /// node in the graph. Most side-effects (creating new nodes, deleting existing
 /// nodes, handling connections...) are already handled by the library, but this
 /// mechanism allows creating additional side effects from user code.
-#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+#[derive(Clone, Debug, PartialEq, Eq)]
 pub enum MyResponse {
     SetActiveNode(NodeId),
     ClearActiveNode,
     SetComponentInfixOp(NodeId, ComponentInfixOp),
     SetComponentFn(NodeId, ComponentFn),
+    SetComment(NodeId, String),
 }
 
 /// The graph 'global' state. This state struct is passed around to the node and
@@ -424,6 +425,16 @@ impl NodeDataTrait for MyNodeData {
                     )));
                 }
             }
+            MyNodeTemplate::Comment => {
+                let mut s = if user_state.comments.contains_key(node_id) {
+                    user_state.comments[node_id].clone()
+                } else {
+                    String::new()
+                };
+                if ui.text_edit_multiline(&mut s).changed() {
+                    responses.push(NodeResponse::User(MyResponse::SetComment(node_id, s)));
+                }
+            }
             _ => (),
         }
 
@@ -680,6 +691,9 @@ impl NodeGraphWidget {
                             MyNodeTemplate::ComponentFn(current_func, _) => *current_func = func,
                             _ => panic!("Wrong message"),
                         }
+                    }
+                    MyResponse::SetComment(id, text) => {
+                        self.user_state.comments.insert(id, text);
                     }
                 }
             }
