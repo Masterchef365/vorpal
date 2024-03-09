@@ -53,6 +53,7 @@ pub enum MyNodeTemplate {
     Normalize(DataType),
     Splat(DataType),
     Swizzle(DataType, DataType),
+    Comment,
 }
 
 /// The response type is used to encode side-effects produced when drawing a
@@ -70,10 +71,11 @@ pub enum MyResponse {
 /// The graph 'global' state. This state struct is passed around to the node and
 /// parameter drawing callbacks. The contents of this struct are entirely up to
 /// the user. For this example, we use it to keep track of the 'active' node.
-#[derive(Default, Clone)]
+#[derive(Clone)]
 #[cfg_attr(feature = "persistence", derive(serde::Serialize, serde::Deserialize))]
 pub struct MyGraphState {
     active_node: Option<NodeId>,
+    comments: UniqueSecondaryMap<NodeId, String>,
 }
 
 // =========== Then, you need to implement some traits ============
@@ -120,6 +122,7 @@ impl NodeTemplateTrait for MyNodeTemplate {
             Self::Output(dtype) => format!("Output ({dtype})"),
             Self::Dot(dtype) => format!("Dot ({dtype})"),
             Self::Swizzle(dtype, other_dtype) => format!("Swizzle {dtype} -> {other_dtype}"),
+            Self::Comment => format!("Comment"),
         })
     }
 
@@ -137,7 +140,7 @@ impl NodeTemplateTrait for MyNodeTemplate {
             MyNodeTemplate::Swizzle(dtype, _other_dtype) => {
                 //vec![dtype.dtype_name(), other_dtype.dtype_name()]
                 match dtype {
-                    // Don't bother showing the swizzles that result in a scalar; 
+                    // Don't bother showing the swizzles that result in a scalar;
                     // these are already GetComponent
                     DataType::Scalar => vec![],
                     DataType::Vec2 => vec!["Swizzle Vec2"],
@@ -146,6 +149,7 @@ impl NodeTemplateTrait for MyNodeTemplate {
                 }
             }
             MyNodeTemplate::Output(_) => vec![],
+            MyNodeTemplate::Comment => vec!["Util"],
         }
     }
 
@@ -164,7 +168,7 @@ impl NodeTemplateTrait for MyNodeTemplate {
     fn build_node(
         &self,
         graph: &mut Graph<Self::NodeData, Self::DataType, Self::ValueType>,
-        _user_state: &mut Self::UserState,
+        user_state: &mut Self::UserState,
         node_id: NodeId,
     ) {
         // The nodes are created empty by default. This function needs to take
@@ -232,6 +236,7 @@ impl NodeTemplateTrait for MyNodeTemplate {
                 add_input(graph, "indices", *output_dtype);
                 add_output(graph, "out", *output_dtype);
             }
+            MyNodeTemplate::Comment => {}
         }
     }
 }
@@ -277,6 +282,8 @@ impl NodeTemplateIter for AllMyNodeTemplates<'_> {
         for (id, dtype) in self.params.inputs() {
             types.push(MyNodeTemplate::Input(id.clone(), *dtype));
         }
+
+        types.push(MyNodeTemplate::Comment);
 
         types
     }
@@ -558,6 +565,7 @@ fn extract_node_from_graph_recursive(
             input_vector_dtype: *input_dtype,
             output_vector_dtype: *output_dtype,
         }),
+        MyNodeTemplate::Comment => unreachable!(),
     })
 }
 
@@ -596,7 +604,10 @@ impl NodeGraphWidget {
     /// Create a new nodegraph widget with the given input list
     pub fn new(params: ParameterList, output_dtype: DataType, output_name: String) -> Self {
         let mut state: MyEditorState = MyEditorState::default();
-        let mut user_state: MyGraphState = Default::default();
+        let mut user_state: MyGraphState = MyGraphState {
+            active_node: None,
+            comments: UniqueSecondaryMap::new_from_key(&state.graph.nodes),
+        };
 
         let output = MyNodeTemplate::Output(output_dtype);
 
@@ -743,6 +754,7 @@ impl MyNodeTemplate {
             | MyNodeTemplate::Normalize(dtype)
             | MyNodeTemplate::Swizzle(_, dtype)
             | MyNodeTemplate::Dot(dtype) => Some(*dtype),
+            MyNodeTemplate::Comment => None,
         }
     }
 }
