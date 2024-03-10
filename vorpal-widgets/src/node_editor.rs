@@ -230,7 +230,7 @@ impl NodeTemplateTrait for MyNodeTemplate {
             }
             MyNodeTemplate::Normalize(dtype) => {
                 add_input(graph, "x", *dtype);
-                add_output(graph, "out", DataType::Vec2);
+                add_output(graph, "out", *dtype);
             }
             MyNodeTemplate::Swizzle(input_dtype, output_dtype) => {
                 add_input(graph, "x", *input_dtype);
